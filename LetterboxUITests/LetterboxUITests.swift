@@ -56,9 +56,12 @@ final class LetterboxUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.5) // let the menu finish opening
             if entry.isHittable { entry.tap() }
             if opened.waitForExistence(timeout: 6) { return }
-            // Menu may still be open: dismiss it by tapping the message area (not the
-            // keyboard, not the menu) before trying again.
-            if entry.exists { app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.45)).tap() }
+            // The tap was swallowed and the menu is still open. Tap the item again rather than
+            // tapping "outside": at the largest text sizes the menu covers most of the screen.
+            if entry.exists, entry.isHittable {
+                entry.tap()
+                if opened.waitForExistence(timeout: 6) { return }
+            }
         }
         XCTFail("Couldn't open \(item) from the menu")
     }

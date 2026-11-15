@@ -22,7 +22,7 @@ let package = Package(
     ],
     dependencies: [
         // BIP-340 Schnorr signatures for Nostr events (CryptoKit has no secp256k1).
-        .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", exact: "0.24.0"),
+        .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", exact: "0.25.1"),
     ],
     targets: [
         // Core: entities, value types and ports (protocols). Foundation only.

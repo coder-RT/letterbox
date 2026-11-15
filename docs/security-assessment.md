@@ -3,12 +3,31 @@
 | | |
 |---|---|
 | Date | 2026-11-15 |
-| Code | commit `e1a5f92` plus local changes from this assessment (UI fixes, security tests, `make security`) |
+| Code | assessed at commit `c476cbc`; fixes in `b5f1f9d` and the following commit (branch `security`) |
 | Platforms tested | iPhone 16 Pro on iOS 27.0.1 (real device), iOS 26.5 and 27.2 simulators, macOS app |
 | Standard | [OWASP DevSecOps Verification Standard (DSOVS)](https://github.com/OWASP/www-project-devsecops-verification-standard), commit `09be4c6` (2026-08-01) |
 | Re-run | `make security` (scanners and DAST suites), `make test`, `make ui-test` |
 
-## Summary
+## Status after fixes (2026-11-15)
+
+| Finding | Severity | Status |
+|---|---|---|
+| SEC-01 Peer table flood | Medium | **Fixed.** Capped at 256 and 32 new identities per link per minute. DAST: 1,000 forged gives 32 peers; 400 over 10 links gives 256 |
+| SEC-02 Receipt amplification | Medium | **Fixed.** Receipts merged (at most 2 pending, 50 IDs each); the queue limit covers all items. DAST: 300 envelopes give 2 receipt envelopes (was 300) |
+| SEC-03 No rate limit | Medium | **Fixed.** Per-sender and per-link limits, checked after the signature; rejected messages aren't relayed. DAST: 30 of 500 relayed (was 500) |
+| SEC-04 Trackable identity | Medium | Open: needs protocol v2 (identity rotation) |
+| SEC-05 Envelope privacy limits | Low | Open by design: protocol v2 (rotating tags, prekeys) |
+| SEC-06 Crypto dependency behind | Low | **Fixed.** Upgraded to swift-secp256k1 0.25.1; x-only keys validated when created |
+| SEC-07 Replay after restart | Low | **Fixed.** Recent envelope and message IDs saved in the encrypted state file. DAST: replay after restart is ignored |
+| SEC-08 Bluetooth queues have no limit | Low | **Fixed.** 1,024 chunks per write queue, 4,096 for notifications |
+| SEC-09 Clipboard syncs | Low | **Fixed on iOS:** local-only, expires after 2 minutes. macOS has no local-only option |
+| SEC-10 Test code in Release | Low | Accepted for now: the test entry point is compiled out (verified). Xcode can't link a package product for Debug only, so this needs moving the simulated world into a debug-only module |
+| SEC-11 First announce wins a PeerID | Low | Open: to be designed with protocol v2 (bind PeerID to proof of key) |
+| SEC-12 to SEC-14 | Info | Accepted or documented |
+
+All 9 mesh DAST tests now assert the fixed behaviour; no known issues remain in the suite.
+
+## Summary (at the time of the assessment)
 
 Letterbox has **no critical or high-severity vulnerabilities**: no hardcoded secrets, no known-vulnerable dependencies, no static-analysis findings, no way to forge or read another person's messages, and the app survived every crash and fuzzing attack thrown at it.
 
@@ -188,7 +207,7 @@ Levels run from 0 (none) to 3 (fully automated and governed). "N/A" means the co
 | CODE-002 Hardcoded secrets detection | **1** | gitleaks via `make security`; `.gitleaksignore` reviewed | Add gitleaks to a CI workflow (level 2) |
 | CODE-003 Manual secure code review | **1** | This review and its checklist (below) | Use the checklist on every pull request |
 | CODE-004 SAST | **1** | semgrep via `make security` | Run in CI and fail the build on findings |
-| CODE-005 SCA | **1** | osv-scanner via `make security`; advisory check | Dependabot or osv-scanner in CI |
+| CODE-005 SCA | **1** | osv-scanner via `make security`; advisory check; dependency now current (0.25.1) | Dependabot or osv-scanner in CI |
 | CODE-006 Licence compliance | 1 (manual) | Only dependency is MIT | **Add a LICENSE to the repo**; run a licence scan in CI |
 | CODE-007 IDE secure code analysis | 0 | — | Optional: semgrep IDE plugin |
 | CODE-008 Container scanning | N/A | No containers | — |
@@ -208,7 +227,7 @@ Levels run from 0 (none) to 3 (fully automated and governed). "N/A" means the co
 | REL-004 Secure configuration | **1** | Minimal entitlements, sandbox on Mac, no transport-security exceptions | Add a release checklist |
 | REL-005 to REL-008 Release policy and compliance | 0 | — | A release checklist covering `make security` and the binary checks |
 | REQ-001 to REQ-003 Requirements | 0 | — | Write abuse stories for new features (for example "a stranger floods envelopes") |
-| REQ-004 Security issue tracking | 0 | Findings live only in this document | **Open GitHub issues for SEC-01 to SEC-11** |
+| REQ-004 Security issue tracking | 0 | Findings and their status live in this document | **Open GitHub issues for the remaining open findings (SEC-04, SEC-05, SEC-10, SEC-11)** |
 | TEST-001 Security test management | **1** | Simulated mesh and in-memory stores keep tests separate from real data | — |
 | TEST-002 DAST | **1** | On-demand DAST suites, real-device and real-Bluetooth tests | Run in CI (level 2) |
 | TEST-003 IAST | 0 | — | Optional: Address Sanitizer and Thread Sanitizer runs of the test suite |
@@ -236,15 +255,29 @@ Used for this review. Apply it to future changes.
 
 ## Remediation plan
 
-| Priority | Finding | Effort |
+| Priority | Finding | Effort | Status |
+|---|---|---|---|
+| 1 | SEC-02 Cap receipts, apply the queue limit to all items | Small | Done |
+| 2 | SEC-01 Cap the peer table | Small | Done |
+| 3 | SEC-03 Per-sender and per-link rate limiting | Medium | Done |
+| 4 | SEC-07 Save opened envelope and received message IDs | Small | Done |
+| 5 | SEC-06 Upgrade swift-secp256k1 to 0.25.1 | Medium (API migration) | Done |
+| 6 | SEC-08 Cap Bluetooth queues; SEC-09 local-only clipboard | Small each | Done |
+| 6b | SEC-10 Debug-only test support | Small to medium | Accepted for now |
+| 7 | SEC-11 PeerID conflict handling | Medium | Open (protocol v2) |
+| 8 | SEC-04 / SEC-05 Identity rotation and envelope privacy | Large (protocol v2) | Open |
+
+**New limits and their defaults** (in `MeshNode.Configuration`):
+
+| Setting | Default | Why |
 |---|---|---|
-| 1 | SEC-02 Cap receipts, apply the queue limit to all items | Small |
-| 2 | SEC-01 Cap the peer table | Small |
-| 3 | SEC-03 Per-sender and per-link rate limiting | Medium |
-| 4 | SEC-07 Save opened envelope and received message IDs | Small |
-| 5 | SEC-06 Upgrade swift-secp256k1 to 0.25.1 | Medium (API migration) |
-| 6 | SEC-08 Cap Bluetooth queues; SEC-09 local-only clipboard; SEC-10 Debug-only test support | Small each |
-| 7 | SEC-11 PeerID conflict handling | Medium |
-| 8 | SEC-04 / SEC-05 Identity rotation and envelope privacy | Large (protocol v2) |
+| `maxPeers` | 256 | People tracked at once |
+| `newPeersPerLinkPerMinute` | 32 | New identities from one Bluetooth link |
+| `publicMessagesPerSenderPerMinute` | 20 | A verified person posting in #nearby |
+| `unverifiedMessagesPerLinkPerMinute` | 30 | Posts from senders we can't check, per link |
+| `relayedDirectedPerSenderPerMinute` | 120 | Handshakes and private messages passed on for one sender |
+| `maxPendingReceiptsPerPerson` / `maxIDsPerReceipt` | 2 / 50 | Receipts waiting for someone out of reach |
+
+If real groups hit these, raise them. The DAST suite shows what each one protects against.
 
 When a fix lands, its `withKnownIssue` in `SecurityDASTTests` reports an unexpected pass. Remove the wrapper, so the test becomes a regression test.
