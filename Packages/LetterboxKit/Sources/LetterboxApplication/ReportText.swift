@@ -51,6 +51,9 @@ public enum ReportText {
 /// own domain, configured outside the repository), so nothing personal is committed.
 public enum SupportContact {
     public static let website = URL(string: "https://github.com/coder-RT/letterbox")!
+    /// docs/privacy-policy.md and docs/support.md, published with GitHub Pages.
+    public static let privacyPolicy = URL(string: "https://coder-rt.github.io/letterbox/privacy-policy")!
+    public static let questions = URL(string: "https://coder-rt.github.io/letterbox/support")!
 
     /// Accepts only something that looks like an email address; an unset build setting
     /// (empty, or the literal `$(…)`) counts as no address.

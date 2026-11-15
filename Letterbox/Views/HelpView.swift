@@ -29,6 +29,14 @@ struct HelpView: View {
                     }
                     .accessibilityIdentifier("contact-email")
                 }
+                Link(destination: SupportContact.questions) {
+                    RowLabel("Questions and answers", systemImage: "questionmark.circle")
+                }
+                .accessibilityIdentifier("contact-questions")
+                Link(destination: SupportContact.privacyPolicy) {
+                    RowLabel("Privacy policy", systemImage: "hand.raised")
+                }
+                .accessibilityIdentifier("contact-privacy")
                 Link(destination: SupportContact.website) {
                     RowLabel("Website and source code", systemImage: "safari")
                 }

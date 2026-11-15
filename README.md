@@ -18,6 +18,7 @@ Letterbox runs its **own network**. It uses its own Bluetooth service ID, its ow
 - [Security assessment](docs/security-assessment.md): threat model, findings with severity and evidence, the OWASP DSOVS maturity scorecard, and how to re-run the checks (`make security`).
 - [Design and accessibility](docs/design.md): screen-by-screen changes, icons and their licences, colours with contrast ratios, the accessibility checklist.
 - [Domain map](docs/domain.md): the bounded contexts, a glossary of terms, and which port and adapter each concept lives in.
+- [Privacy policy](docs/privacy-policy.md) and [Support: questions and answers](docs/support.md): the public pages the App Store needs.
 - [Publishing on the App Store](docs/app-store-release.md): what App Review needs, what's built, and the steps for the company publishing it.
 - [Gap analysis](docs/gap-analysis.md): Letterbox compared with bitchat's design docs. What was added, what was already covered, what's deliberately left out and why, and the release checklist.
 

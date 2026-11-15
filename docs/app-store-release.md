@@ -38,7 +38,7 @@ Rules and laws change; check each point against Apple's current documents before
 4. Archive the **Release** configuration (location channels off) and upload it with Xcode.
 
 ### 3. App Store Connect
-1. **Privacy policy URL** and **support URL**. GitHub Pages works; the privacy label is "Data Not Collected".
+1. **Privacy policy URL** and **support URL**: [`privacy-policy.md`](privacy-policy.md) and [`support.md`](support.md), published with GitHub Pages at `https://coder-rt.github.io/letterbox/privacy-policy` and `/support`. The app links to both from Help and safety, as guideline 5.1.1 requires. The privacy label is "Data Not Collected". If the company wants its name and address in the policy, add them to "Who we are".
 2. **Age rating:** answer the questionnaire honestly. It's chat with strangers, so expect a high rating. Check Apple's notice on apps distributed in Texas and the Declared Age Range API.
 3. **Encryption:** answer **Yes** (Noise and ChaCha20-Poly1305, not only Apple's built-in encryption). For **France**, file the ANSSI declaration or leave France out until it's done.
 4. **Availability:** leave out **China** (Apple removed bitchat there in 2026 at the government's request, and China needs an ICP filing).
