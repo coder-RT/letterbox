@@ -1,4 +1,4 @@
-.PHONY: help gen test ui-test test-all mac run-mac ios install-ios clean
+.PHONY: help gen test ui-test test-all security mac run-mac ios install-ios clean
 
 PROJECT := Letterbox.xcodeproj
 DERIVED := build/DerivedData
@@ -25,6 +25,18 @@ ui-test: gen ## Run the iPhone UI tests in the simulator (simulated mesh, access
 	xcodebuild test -project $(PROJECT) -scheme Letterbox -destination '$(SIMULATOR)' -derivedDataPath $(DERIVED) -resultBundlePath build/UITests.xcresult
 
 test-all: test ui-test ## Package tests, then UI tests
+
+security: ## Security checks: secrets (gitleaks), dependencies (osv-scanner), SAST (semgrep), DAST suites. See docs/security-assessment.md
+	@command -v gitleaks >/dev/null && command -v osv-scanner >/dev/null && command -v semgrep >/dev/null || \
+		{ echo "Install the scanners first: brew install gitleaks osv-scanner semgrep"; exit 1; }
+	gitleaks git . --no-banner --redact
+	for d in Letterbox Packages/LetterboxKit/Sources Packages/LetterboxKit/Tests LetterboxUITests Config docs; do \
+		gitleaks dir $$d --no-banner --redact --gitleaks-ignore-path .gitleaksignore || exit 1; done
+	osv-scanner scan source -r Packages/LetterboxKit
+	semgrep scan --metrics=off --error --config p/swift --config p/secrets --config p/insecure-transport \
+		--exclude build --exclude .build --exclude Letterbox.xcodeproj --quiet .
+	cd Packages/LetterboxKit && swift test --filter 'Security'
+	@echo "Security checks finished. Known, documented weaknesses show as known issues in the DAST suite."
 
 mac: gen ## Build the Mac app
 	xcodebuild -project $(PROJECT) -scheme LetterboxMac -configuration Debug -derivedDataPath $(DERIVED) -allowProvisioningUpdates build

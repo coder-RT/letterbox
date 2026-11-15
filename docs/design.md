@@ -57,7 +57,7 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 |---|---|---|---|---|
 | Accent (ink blue) | `#1D4ED8` (≈6.7:1 on white) | `#7AA2F7` (≈8:1 on black) | `#1E3A8A` / `#A5C0FF` | Buttons, links, icons |
 | Own bubble | `#1D4ED8` | `#3B63D9` (white text ≈5.3:1) | `#1E3A8A` / `#1E40AF` | Your messages |
-| Secondary text | `#505055` (≈8:1) | `#ADADB2` (≈9:1) | — | Captions, timestamps, footers |
+| Secondary text | `#45454A` (≈9.5:1) | `#ADADB2` (≈9:1) | — | Captions, timestamps, footers |
 | Good | `#1A7F37` (≈5:1) | `#4CD964` | — | Working, Verified |
 | Warning | `#B45309` (≈5:1) | `#FFB340` | — | Off in Letterbox, impostor warning |
 | Bad | `#C0262D` (≈6:1) | `#FF6961` | — | Not allowed, Not delivered |

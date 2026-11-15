@@ -57,8 +57,10 @@ public struct NostrEvent: Codable, Sendable, Equatable {
               let sigBytes = Data(hexString: sig), sigBytes.count == 64,
               let signature = try? P256K.Schnorr.SchnorrSignature(dataRepresentation: sigBytes)
         else { return false }
-        var message = [UInt8](expected)
-        return P256K.Schnorr.XonlyKey(dataRepresentation: pubkeyBytes).isValid(signature, for: &message)
+        // Since swift-secp256k1 0.25 an x-only key is validated (length and curve point)
+        // when it's created, so a malformed key from a relay is rejected here, not deep inside.
+        guard let key = try? P256K.Schnorr.XonlyKey(dataRepresentation: pubkeyBytes) else { return false }
+        return key.isValid(signature, for: [UInt8](expected))
     }
 }
 
@@ -71,7 +73,7 @@ public struct NostrKeys: Sendable, Equatable {
     public init(privateKey: Data) throws {
         let key = try P256K.Schnorr.PrivateKey(dataRepresentation: privateKey)
         self.privateKey = privateKey
-        publicKeyHex = Data(key.xonly.bytes).hexString
+        publicKeyHex = Data(key.xonly.dataRepresentation).hexString
     }
 
     public static func generate() -> NostrKeys {
@@ -98,9 +100,9 @@ public struct NostrKeys: Sendable, Equatable {
         let timestamp = Int(createdAt.timeIntervalSince1970)
         let id = NostrEvent.computeID(pubkey: publicKeyHex, createdAt: timestamp, kind: kind, tags: tags, content: content)
         let key = try P256K.Schnorr.PrivateKey(dataRepresentation: privateKey)
-        var message = [UInt8](id)
-        var auxiliary = [UInt8](CryptoKit.SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
-        let signature = try key.signature(message: &message, auxiliaryRand: &auxiliary, strict: true)
+        let auxiliary = [UInt8](CryptoKit.SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
+        // BIP-340 over the 32-byte event id; the library verifies its own output before returning.
+        let signature = try key.signature(message: [UInt8](id), auxiliaryRand: auxiliary)
         return NostrEvent(
             id: id.hexString,
             pubkey: publicKeyHex,

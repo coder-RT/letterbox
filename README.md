@@ -14,6 +14,7 @@ Letterbox runs its **own network**. It uses its own Bluetooth service ID, its ow
 
 - [Texting Without Internet: A Hiker's Field Guide](docs/offline-texting-hiking-guide.md): how to use Letterbox, SMS and satellite texting on the trail, plus what to do when nothing works.
 - [Features, scored](docs/features.md): every feature with its value, completeness and test coverage, and the field tests still needed.
+- [Security assessment](docs/security-assessment.md): threat model, findings with severity and evidence, the OWASP DSOVS maturity scorecard, and how to re-run the checks (`make security`).
 - [Design and accessibility](docs/design.md): screen-by-screen changes, icons and their licences, colours with contrast ratios, the accessibility checklist.
 - [Domain map](docs/domain.md): the bounded contexts, a glossary of terms, and which port and adapter each concept lives in.
 
@@ -31,6 +32,7 @@ DEVELOPMENT_TEAM := <your Apple developer team ID, from Xcode → Settings → A
 ```bash
 make test         # all LetterboxKit tests, no device needed
 make ui-test      # iPhone UI tests in the simulator: simulated mesh, accessibility audits, screenshots
+make security     # secret, dependency and static scans, plus the DAST attack suites
 make run-mac      # build and open the Mac app
 make install-ios  # build, install and launch on your iPhone (cable or same Wi-Fi)
 ```
@@ -108,7 +110,7 @@ Types: `announce` 0x01, `publicMessage` 0x02, `leave` 0x03, `handshake` 0x10, `e
 
 ## Tests
 
-`make test` runs 313 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 11 iPhone UI tests in the simulator:
+`make test` runs 323 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 11 iPhone UI tests in the simulator:
 - **Domain:** geohash encoding at every level and the map's edges, nickname cleaning, identifiers and hex parsing
 - **Wire format:** every packet type, the exact byte layout, forward-compatible TLV fields, payload limits, BLE chunking across MTUs, and fuzzing with random bytes and every single-bit flip
 - **Crypto:** the Noise implementation byte for byte against the published conformance vectors, handshake turn-taking and tampering, nonce encoding, the replay window, and signatures

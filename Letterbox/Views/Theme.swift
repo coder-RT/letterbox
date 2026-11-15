@@ -22,7 +22,7 @@ enum Theme {
     static let bad = Color.dynamicRGB(light: (0xC0, 0x26, 0x2D), dark: (0xFF, 0x69, 0x61))
 
     static let secondaryText = Color.dynamic(
-        light: (hue: 240.0 / 360, saturation: 0.05, brightness: 0.33),  // ≈ #505055, 8:1 on white
+        light: (hue: 240.0 / 360, saturation: 0.05, brightness: 0.29),  // ≈ #45454A, 9.5:1 on white
         dark: (hue: 240.0 / 360, saturation: 0.03, brightness: 0.70)    // ≈ #ADADB2, 9:1 on black
     )
 

@@ -44,12 +44,32 @@ public actor MeshNode: MeshTransport {
         /// often (in case the hand-off was lost). Direct neighbours get it straight away.
         public var courierRetryInterval: TimeInterval = 30
 
+        // Abuse limits (see docs/security-assessment.md, SEC-01 to SEC-03).
+        /// People tracked at once. Beyond this, the least recently heard peer that is
+        /// neither a direct neighbour nor in a session is forgotten.
+        public var maxPeers = 256
+        /// New identities accepted per Bluetooth link per minute (burst of the same size).
+        public var newPeersPerLinkPerMinute: Double = 32
+        /// Public messages per sender per minute, shown and relayed (burst of the same size).
+        public var publicMessagesPerSenderPerMinute: Double = 20
+        /// Public messages per link per minute from senders we haven't heard announce,
+        /// whose name can't be checked (burst of the same size).
+        public var unverifiedMessagesPerLinkPerMinute: Double = 30
+        /// Directed packets (handshakes, private messages) relayed per sender per minute.
+        public var relayedDirectedPerSenderPerMinute: Double = 120
+        /// Receipts kept waiting per person; beyond this, receipt IDs are merged or dropped.
+        public var maxPendingReceiptsPerPerson = 2
+        /// Message IDs carried in one merged receipt.
+        public var maxIDsPerReceipt = 50
+
         public init() {}
     }
 
     static let prologue = Data("letterbox/mesh/1".utf8)
     private static let maxBufferedCiphertexts = 16
     private static let maxPendingHandshakes = 32
+    /// Recent envelope and message IDs kept across restarts to recognise replays.
+    private static let persistedRecentIDs = 1000
 
     public nonisolated let events: AsyncStream<MeshEvent>
     public nonisolated let myFingerprint: Fingerprint
@@ -81,6 +101,10 @@ public actor MeshNode: MeshTransport {
     private var linkTask: Task<Void, Never>?
     private var running = false
     private var lastEnvelopes = EnvelopeSummary.empty
+    private var newPeerLimiter: RateLimiter<LinkID>
+    private var publicLimiter: RateLimiter<PeerID>
+    private var unverifiedLimiter: RateLimiter<LinkID>
+    private var directedRelayLimiter: RateLimiter<PeerID>
 
     // Store and forward.
     private var contacts: [Fingerprint: Contact] = [:]
@@ -109,6 +133,13 @@ public actor MeshNode: MeshTransport {
         self.now = now
         myFingerprint = identity.fingerprint
         carried = CarriedEnvelopes(capacity: configuration.maxCarriedEnvelopes, maxLifetime: configuration.maxCarryTime)
+        newPeerLimiter = RateLimiter(capacity: configuration.newPeersPerLinkPerMinute, perMinute: configuration.newPeersPerLinkPerMinute)
+        publicLimiter = RateLimiter(capacity: configuration.publicMessagesPerSenderPerMinute,
+                                    perMinute: configuration.publicMessagesPerSenderPerMinute)
+        unverifiedLimiter = RateLimiter(capacity: configuration.unverifiedMessagesPerLinkPerMinute,
+                                        perMinute: configuration.unverifiedMessagesPerLinkPerMinute)
+        directedRelayLimiter = RateLimiter(capacity: configuration.relayedDirectedPerSenderPerMinute,
+                                           perMinute: configuration.relayedDirectedPerSenderPerMinute)
         (events, continuation) = AsyncStream.makeStream(of: MeshEvent.self, bufferingPolicy: .bufferingNewest(512))
 
         if let data = store?.load(), let snapshot = try? JSONDecoder().decode(MeshSnapshot.self, from: data),
@@ -118,6 +149,8 @@ public actor MeshNode: MeshTransport {
             contacts = restored.contacts
             carried = restored.carried
             restoredMessages = restored.messages
+            openedEnvelopes = RecentIDs(restoring: snapshot.openedEnvelopes ?? [])
+            receivedIDs = RecentIDs(restoring: snapshot.receivedMessageIDs ?? [])
         }
     }
 
@@ -265,18 +298,21 @@ public actor MeshNode: MeshTransport {
         guard abs(current.timeIntervalSince(sent)) <= config.maxClockSkew else { return }
 
         let forMe = packet.recipient == nil || packet.recipient == peerID
+        var relay = true
         if forMe {
             switch packet.type {
-            case .announce: handleAnnounce(packet, from: linkID)
-            case .publicMessage: handlePublicMessage(packet)
+            case .announce: relay = handleAnnounce(packet, from: linkID)
+            case .publicMessage: relay = handlePublicMessage(packet, from: linkID) // forged or over the limit: not passed on
             case .leave: handleLeave(packet)
             case .handshake: handleHandshake(packet)
             case .encrypted: handleEncrypted(packet)
             case .courier: handleCourier(packet)
             }
+        } else if !directedRelayLimiter.allow(packet.sender, now: current) {
+            relay = false // SEC-03: one sender can't flood directed traffic through us
         }
 
-        if packet.recipient != peerID, packet.ttl > 1 {
+        if relay, packet.recipient != peerID, packet.ttl > 1 {
             scheduleRelay(packet, from: linkID)
         }
     }
@@ -297,19 +333,26 @@ public actor MeshNode: MeshTransport {
 
     // MARK: - Packet handlers
 
-    private func handleAnnounce(_ packet: Packet, from linkID: LinkID) {
+    /// Returns whether the announce should be relayed.
+    @discardableResult
+    private func handleAnnounce(_ packet: Packet, from linkID: LinkID) -> Bool {
         guard let announce = try? AnnouncePayload.decode(packet.payload),
               let signature = packet.signature,
               IdentityKeys.verify(signature, for: packet.signingBytes(), signingKey: announce.signingKey)
-        else { return }
+        else { return false }
 
         if let existing = peers[packet.sender], existing.noiseKey != announce.noiseKey {
-            return // PeerID already bound to a different identity this session: ignore.
+            return false // PeerID already bound to a different identity this session: ignore.
         }
 
         let isDirect = packet.ttl == config.defaultTTL
         let fingerprint = IdentityKeys.fingerprint(ofNoiseKey: announce.noiseKey)
         let isNew = peers[packet.sender] == nil
+        // SEC-01: identities are free to mint, so new ones are rate-limited per link and
+        // the table is capped.
+        if isNew {
+            guard newPeerLimiter.allow(linkID, now: now()), makeRoomForPeer(isDirect: isDirect) else { return false }
+        }
         if isDirect {
             // A link carries exactly one neighbour.
             for key in peers.keys where key != packet.sender {
@@ -341,6 +384,18 @@ public actor MeshNode: MeshTransport {
             if !isDirect { announceToNewPeer() }
             pump(fingerprint)
         }
+        return true
+    }
+
+    /// Frees a slot in the peer table if it's full. Forgets the least recently heard peer
+    /// that is neither a direct neighbour nor in a session; a direct newcomer may also
+    /// replace a far-away peer. Returns false if there's no room.
+    private func makeRoomForPeer(isDirect: Bool) -> Bool {
+        guard peers.count >= config.maxPeers else { return true }
+        let evictable = peers.values.filter { $0.directLinks.isEmpty && sessions[$0.peerID] == nil }
+        guard let stalest = evictable.min(by: { $0.lastSeen < $1.lastSeen }) else { return false }
+        removePeer(stalest.peerID)
+        return true
     }
 
     /// Someone far away just appeared; they may not know us yet. (Direct links
@@ -352,14 +407,23 @@ public actor MeshNode: MeshTransport {
         broadcastAnnounce()
     }
 
-    private func handlePublicMessage(_ packet: Packet) {
-        guard let message = try? PublicMessagePayload.decode(packet.payload) else { return }
+    /// Returns whether the message was accepted (and so should be relayed).
+    private func handlePublicMessage(_ packet: Packet, from linkID: LinkID) -> Bool {
+        guard let message = try? PublicMessagePayload.decode(packet.payload) else { return false }
         let record = peers[packet.sender]
         var verified = false
-        if let record, let signature = packet.signature {
+        if let record {
+            guard let signature = packet.signature else { return false } // known sender, unsigned: forged
             verified = IdentityKeys.verify(signature, for: packet.signingBytes(), signingKey: record.signingKey)
-            if !verified { return } // Known sender, bad signature: forged.
+            if !verified { return false } // Known sender, bad signature: forged.
         }
+        // SEC-03: limit after verifying, so forgeries can't use up a real person's allowance.
+        // Senders we can't check share a smaller allowance per link.
+        let current = now()
+        let allowed = record != nil
+            ? publicLimiter.allow(packet.sender, now: current)
+            : unverifiedLimiter.allow(linkID, now: current)
+        guard allowed else { return false }
         continuation.yield(.publicMessage(ChatMessage(
             id: packet.packetID.hexString,
             channel: .mesh,
@@ -370,6 +434,7 @@ public actor MeshNode: MeshTransport {
             isOwn: false,
             isVerified: verified
         )))
+        return true
     }
 
     private func handleLeave(_ packet: Packet) {
@@ -509,7 +574,7 @@ public actor MeshNode: MeshTransport {
         switch message {
         case let .message(id, nickname, text, timestamp):
             let isNew = receivedIDs.insert(id)
-            outbox[sender, default: []].append(OutgoingPrivate(payload: .delivered(ids: [id]), created: now()))
+            queueReceipt(for: id, to: sender)
             dirty = true
             if isNew {
                 continuation.yield(.privateMessage(ChatMessage(
@@ -716,9 +781,11 @@ extension MeshNode {
     }
 
     private func openEnvelope(_ envelope: CourierEnvelope) {
-        guard openedEnvelopes.insert(envelope.id.hexString),
+        guard !openedEnvelopes.contains(envelope.id.hexString),
               let opened = Courier.open(envelope, as: identity)
         else { return }
+        _ = openedEnvelopes.insert(envelope.id.hexString) // only genuine envelopes take up memory
+        dirty = true
         let sender = IdentityKeys.fingerprint(ofNoiseKey: opened.senderKey)
         guard sender != myFingerprint else { return }
         // Now we can reply by courier too, even if we've never met them.
@@ -823,6 +890,27 @@ extension MeshNode {
         publishEnvelopes()
     }
 
+    /// SEC-02: receipts for one person are merged into at most a few pending items, so a
+    /// stranger's flood of messages can't turn into a flood of queued (and couriered) receipts.
+    private func queueReceipt(for id: String, to sender: Fingerprint) {
+        var queue = outbox[sender] ?? []
+        let receiptIndices = queue.indices.filter {
+            if case .delivered = queue[$0].payload { return true }
+            return false
+        }
+        if let last = receiptIndices.last, case let .delivered(ids) = queue[last].payload,
+           queue[last].envelope == nil, ids.count < config.maxIDsPerReceipt {
+            // Not sealed yet: merge into it.
+            queue[last] = OutgoingPrivate(payload: .delivered(ids: ids + [id]), created: queue[last].created)
+        } else if receiptIndices.count < config.maxPendingReceiptsPerPerson {
+            queue.append(OutgoingPrivate(payload: .delivered(ids: [id]), created: now()))
+        } else {
+            return // Enough receipts already waiting for this person; this one is dropped.
+        }
+        outbox[sender] = queue
+        enforceQueueLimit()
+    }
+
     /// Tells the app about our envelopes on their way and those we carry, when that changes.
     private func publishEnvelopes() {
         let outgoing = (awaitingAck.flatMap { key, items in items.map { (key, $0) } }
@@ -853,7 +941,9 @@ extension MeshNode {
         let snapshot = MeshSnapshot(
             outbox: items,
             contacts: Array(contacts.values),
-            carried: carried.items.values.map { MeshSnapshot.Carried(envelope: $0.envelope.encoded(), received: $0.received) }
+            carried: carried.items.values.map { MeshSnapshot.Carried(envelope: $0.envelope.encoded(), received: $0.received) },
+            openedEnvelopes: Array(openedEnvelopes.order.suffix(Self.persistedRecentIDs)),
+            receivedMessageIDs: Array(receivedIDs.order.suffix(Self.persistedRecentIDs))
         )
         guard let data = try? JSONEncoder().encode(snapshot), (try? store.save(data)) != nil else { return }
         dirty = false

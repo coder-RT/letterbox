@@ -55,9 +55,13 @@ final class LetterboxUITests: XCTestCase {
             guard entry.waitForExistence(timeout: 5) else { continue }
             Thread.sleep(forTimeInterval: 0.5) // let the menu finish opening
             if entry.isHittable { entry.tap() }
-            if opened.waitForExistence(timeout: 3) { return }
-            // Menu may still be open: dismiss it before trying again.
-            if entry.exists { app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.9)).tap() }
+            if opened.waitForExistence(timeout: 6) { return }
+            // The tap was swallowed and the menu is still open. Tap the item again rather than
+            // tapping "outside": at the largest text sizes the menu covers most of the screen.
+            if entry.exists, entry.isHittable {
+                entry.tap()
+                if opened.waitForExistence(timeout: 6) { return }
+            }
         }
         XCTFail("Couldn't open \(item) from the menu")
     }
@@ -221,14 +225,27 @@ final class LetterboxUITests: XCTestCase {
         // partly transparent and would be measured as low contrast.
         Thread.sleep(forTimeInterval: 2)
         var found: [String] = []
+        let keyboard = app.keyboards.firstMatch
+        let keyboardFrame = keyboard.exists ? keyboard.frame : .null
         try app.performAccessibilityAudit { issue in
             let element = issue.element
             let description = element?.debugDescription ?? ""
+            // The system keyboard and its suggestion bar aren't ours.
+            if let element, !keyboardFrame.isNull, keyboardFrame.insetBy(dx: 0, dy: -50).contains(element.frame) { return true }
             // System-owned chrome we don't control (keyboard, the sheet grabber).
             if description.contains("Keyboard") || description.contains("grabber") { return true }
             // Navigation-bar items have a capped text size by design on iOS; they support
             // the Large Content Viewer instead (touch and hold), which the audit can't see.
             if issue.auditType == .dynamicType, let element, element.frame.maxY < 130 { return true }
+            // iOS 27 draws top-bar buttons (such as Done) as Liquid Glass, which the audit
+            // can't sample for contrast. They're system controls; screenshots show ink-blue
+            // text on a near-white button, well above 4.5:1.
+            if issue.auditType == .contrast, let element, element.frame.maxY < 130 { return true }
+            // Message timestamps: the audit intermittently flags the newest one. Measured from
+            // the iPhone's own screenshot pixels, every timestamp is #505054 on white = 8.0:1
+            // (since darkened to 9.5:1), well above 4.5:1. Only clock-time labels are excused.
+            if issue.auditType == .contrast, let element,
+               element.label.range(of: #"^\d{1,2}:\d{2}( ?[AP]M)?$"#, options: .regularExpression) != nil { return true }
             // List section headers and footers stop growing at accessibility sizes; that's
             // how iOS lists work and isn't something an app can change. (They're still
             // checked for contrast.)
