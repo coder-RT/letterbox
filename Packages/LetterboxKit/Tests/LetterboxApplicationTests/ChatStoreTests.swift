@@ -438,6 +438,21 @@ struct ChatStoreTimelineTests {
         #expect(store.messages(in: .mesh).count == 1)
     }
 
+    @Test func caughtUpMessagesAreSlottedInByWhenTheyWereSent() async {
+        let (store, mesh, _) = makeStore()
+        await store.start()
+        func at(_ id: String, _ minutesAgo: Double) -> ChatMessage {
+            ChatMessage(id: id, channel: .mesh, senderName: "bob", senderKey: String(repeating: "b", count: 64), text: id,
+                        timestamp: Date().addingTimeInterval(-minutesAgo * 60), isOwn: false, isVerified: true)
+        }
+        mesh.continuation.yield(.publicMessage(at("live", 1)))
+        mesh.continuation.yield(.publicHistory(at("oldest", 90)))
+        mesh.continuation.yield(.publicHistory(at("middle", 30)))
+        mesh.continuation.yield(.publicHistory(at("live", 1))) // already shown live
+        await settle()
+        #expect(store.messages(in: .mesh).map(\.id) == ["oldest", "middle", "live"])
+    }
+
     @Test func timelinesKeepOnlyTheNewestThousand() async {
         let (store, mesh, _) = makeStore()
         await store.start()

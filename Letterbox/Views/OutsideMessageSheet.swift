@@ -28,12 +28,24 @@ struct OutsideMessageSheet: View {
                 } header: {
                     SectionHeader("Invite")
                 } footer: {
-                    SectionFooter("With Letterbox on both phones you can chat with no internet, and they can reply.")
+                    SectionFooter("Then you can both chat with no internet.")
                 }
 
                 Section {
+                    // The box says what goes in it; an empty white area with no hint
+                    // left people tapping the button below instead.
                     TextEditor(text: $text)
                         .frame(minHeight: 120)
+                        .overlay(alignment: .topLeading) {
+                            if text.isEmpty {
+                                Text("Your message")
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                         .accessibilityLabel("Message")
                         .accessibilityIdentifier("outside-text")
                     Toggle("Add how to get Letterbox", isOn: $addInvite)
@@ -43,25 +55,26 @@ struct OutsideMessageSheet: View {
                 }
 
                 Section {
+                    // Always the same words, so it reads as the send button. Until there's a
+                    // message it's grey (the system's disabled dimming fails contrast).
                     if let shareable {
                         ShareLink(item: shareable) {
                             RowLabel("Send via AirDrop or another app", systemImage: "square.and.arrow.up")
                         }
                         .accessibilityIdentifier("outside-share")
                     } else {
-                        RowLabel("Type a message to send", systemImage: "square.and.arrow.up")
-                            .foregroundStyle(Theme.secondaryText)
+                        // Identifier on a wrapper, so the label keeps its own ("row-label").
+                        HStack {
+                            RowLabel("Send via AirDrop or another app", systemImage: "square.and.arrow.up")
+                                .foregroundStyle(Theme.secondaryText)
+                                .accessibilityHint("Type a message first")
+                        }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("outside-share-waiting")
                     }
+                } footer: {
+                    SectionFooter("AirDrop works with no internet to Apple devices nearby; they tap Accept. They can only reply if they get Letterbox. Messages and Mail send it over the internet, outside Letterbox's encryption.")
                 }
-
-                Section {
-                    RowLabel("AirDrop works with no internet, to iPhones, iPads and Macs nearby. They tap Accept.",
-                             systemImage: "antenna.radiowaves.left.and.right")
-                    RowLabel("It's one-way: they can reply in Letterbox only if they install it.", systemImage: "arrow.uturn.left")
-                    RowLabel("Messages and Mail send it over the internet, outside Letterbox's encryption.", systemImage: "lock.open")
-                }
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
             }
             .contentMargins(.top, 24, for: .scrollContent)
             .navigationTitle("Send outside Letterbox")

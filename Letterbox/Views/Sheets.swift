@@ -212,6 +212,7 @@ struct SettingsSheet: View {
     @Environment(ChatStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var nickname = ""
+    @State private var confirmingErase = false
 
     var body: some View {
         NavigationStack {
@@ -231,24 +232,58 @@ struct SettingsSheet: View {
                         RowLabel("Your safety code", systemImage: "qrcode")
                     }
                 } footer: {
-                    SectionFooter("Let a friend scan this in person, so they know messages really come from you. Nicknames can be copied; codes can't.")
+                    SectionFooter("Friends scan this in person to know messages really come from you. Anyone can copy a nickname, but not a code.")
+                }
+                Section {
+                    Toggle(isOn: Binding(get: { store.showsTextInNotifications },
+                                         set: { store.setShowsTextInNotifications($0) })) {
+                        RowLabel("Show names and text in alerts", systemImage: "bell.badge")
+                    }
+                    .accessibilityIdentifier("notification-text-toggle")
+                } header: {
+                    SectionHeader("Alerts")
+                } footer: {
+                    SectionFooter("Off: alerts only say a message arrived, since anyone can read a locked screen. Always hidden with the privacy screen on.")
                 }
                 Section(header: SectionHeader("How it works")) {
                     RowLabel("Messages hop between phones over Bluetooth. No internet, no accounts.", systemImage: "antenna.radiowaves.left.and.right")
-                    RowLabel("Private messages are end-to-end encrypted. Phones that pass them on can't read them.", systemImage: "lock")
-                    RowLabel("If someone's out of reach, your message travels in a sealed envelope with hikers you pass.", systemImage: "envelope")
-                    RowLabel("Chats stay in memory and disappear when the app closes. Only undelivered messages are saved, encrypted.", systemImage: "memorychip")
+                    RowLabel("Private messages are encrypted; phones passing them on can't read them.", systemImage: "lock")
+                    RowLabel("Someone out of reach? Hikers you pass carry your message in a sealed envelope.", systemImage: "envelope")
+                    RowLabel("Chats live in memory. Only undelivered messages are saved, encrypted.", systemImage: "memorychip")
                 }
                 .font(.callout)
+                // Destructive and rare: last, where iOS puts it.
+                Section {
+                    Button(role: .destructive) { confirmingErase = true } label: {
+                        RowLabel("Erase everything", systemImage: "trash")
+                            .foregroundStyle(Theme.bad) // the system red is just under 4.5:1
+                    }
+                    .accessibilityIdentifier("erase-everything")
+                } footer: {
+                    SectionFooter("Deletes everything Letterbox keeps on this phone, including who you are. Can't be undone.")
+                }
             }
-            // Keep the first header clear of the bar's scroll-edge fade.
+            // Keep the first header clear of the bar's scroll-edge fade, and the last
+            // footer (under Erase everything) clear of the bottom edge.
             .contentMargins(.top, 24, for: .scrollContent)
+            .contentMargins(.bottom, 40, for: .scrollContent)
             .navigationTitle("Settings")
             .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .onAppear { nickname = store.nickname }
+            .confirmationDialog("Erase everything from this device?", isPresented: $confirmingErase, titleVisibility: .visible) {
+                Button("Erase everything", role: .destructive) {
+                    Task {
+                        await store.eraseEverything()
+                        dismiss()
+                    }
+                }
+                .accessibilityIdentifier("confirm-erase")
+            } message: {
+                Text("Letterbox stops, and next time it opens you'll be someone new. People you verified will see a new safety number.")
+            }
         }
     }
 

@@ -23,7 +23,7 @@ struct ConnectionsSheet: View {
                 } header: {
                     SectionHeader("Letterbox may use")
                 } footer: {
-                    SectionFooter("Letterbox picks the best allowed way for each message: Bluetooth for people nearby, otherwise an envelope carried by other hikers. Turning the internet off pauses location channels, so relays never see your IP address.")
+                    SectionFooter("Letterbox picks the best allowed way for each message. With the internet off, relays never see your IP address.")
                 }
 
                 Section(header: SectionHeader("Right now")) {

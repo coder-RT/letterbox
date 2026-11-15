@@ -165,3 +165,56 @@ struct EncryptedFileStoreTests {
         #expect(store.load() == nil)
     }
 }
+
+private final class InMemorySecretStore: SecretStore, @unchecked Sendable {
+    private var values: [String: Data] = [:]
+    func load(_ key: String) -> Data? { values[key] }
+    func save(_ data: Data, for key: String) throws { values[key] = data }
+    func deleteAll() { values.removeAll() }
+}
+
+@Suite("Erasing local data")
+struct LocalDataWipeTests {
+    private func temporaryDefaults() -> (UserDefaults, String) {
+        let name = "letterbox.tests.\(UUID().uuidString)"
+        return (UserDefaults(suiteName: name)!, name)
+    }
+
+    @Test func eraserRemovesSecretsFilesAndSettings() throws {
+        let secrets = InMemorySecretStore()
+        try secrets.save(Data([1, 2, 3]), for: "identity.noise")
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("letterbox-wipe-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("sealed".utf8).write(to: folder.appendingPathComponent("mesh-state.bin"))
+        let (defaults, domain) = temporaryDefaults()
+        defaults.set("Ana", forKey: "nickname")
+
+        DeviceDataEraser(secrets: secrets, directory: folder, defaults: defaults, defaultsDomain: domain).eraseAll()
+
+        #expect(secrets.load("identity.noise") == nil)
+        #expect(!FileManager.default.fileExists(atPath: folder.path))
+        #expect(UserDefaults(suiteName: domain)?.string(forKey: "nickname") == nil)
+    }
+
+    @Test func freshInstallClearsKeysLeftByADeletedApp() throws {
+        let secrets = InMemorySecretStore()
+        try secrets.save(Data([9]), for: "identity.noise") // survived an uninstall
+        let (defaults, _) = temporaryDefaults()             // settings didn't
+        FreshInstall.clearLeftoverSecrets(secrets: secrets, defaults: defaults, existingSettingKey: "nickname")
+        #expect(secrets.load("identity.noise") == nil)
+
+        // Later launches leave new keys alone.
+        try secrets.save(Data([7]), for: "identity.noise")
+        FreshInstall.clearLeftoverSecrets(secrets: secrets, defaults: defaults, existingSettingKey: "nickname")
+        #expect(secrets.load("identity.noise") == Data([7]))
+    }
+
+    @Test func updatingFromAnOlderVersionKeepsYourIdentity() throws {
+        let secrets = InMemorySecretStore()
+        try secrets.save(Data([5]), for: "identity.noise")
+        let (defaults, _) = temporaryDefaults()
+        defaults.set("Ana", forKey: "nickname") // written by every earlier version
+        FreshInstall.clearLeftoverSecrets(secrets: secrets, defaults: defaults, existingSettingKey: "nickname")
+        #expect(secrets.load("identity.noise") == Data([5]))
+    }
+}

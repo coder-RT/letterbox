@@ -62,7 +62,26 @@ struct PersonView: View {
             } header: {
                 SectionHeader("Safety number")
             } footer: {
-                SectionFooter("Meet \(peer.nickname) in person and check this number matches the one on their screen, or scan their code. Then you'll know messages really come from them.")
+                SectionFooter("Check in person that \(peer.nickname) sees the same number, or scan their code. Then you know messages really come from them.")
+            }
+
+            Section {
+                if store.isBlocked(peer.fingerprint) {
+                    Button { store.unblock(peer.fingerprint) } label: {
+                        RowLabel("Unblock \(peer.nickname)", systemImage: "nosign")
+                    }
+                    .accessibilityIdentifier("unblock-person")
+                } else {
+                    Button(role: .destructive) { store.block(peer.fingerprint, nickname: peer.nickname) } label: {
+                        RowLabel("Block \(peer.nickname)", systemImage: "nosign")
+                            .foregroundStyle(Theme.bad) // the system red is just under 4.5:1
+                    }
+                    .accessibilityIdentifier("block-person")
+                }
+            } footer: {
+                SectionFooter(store.isBlocked(peer.fingerprint)
+                    ? "You don't see anything \(peer.nickname) sends. Your phone still passes their messages on for others."
+                    : "Hides everything \(peer.nickname) sends, here and in #nearby. They aren't told.")
             }
 
             if let scanResult {

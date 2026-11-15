@@ -27,6 +27,11 @@ public final class BLELinkLayer: NSObject, LinkLayer, @unchecked Sendable {
     private static let maxQueuedWriteChunks = 1024
     private static let maxQueuedNotifyChunks = 4096
     private static let minimumRSSI = -92
+    /// State restoration: if iOS closes Letterbox to free memory while Bluetooth is in
+    /// use, it keeps scanning and advertising for us and relaunches the app in the
+    /// background when a neighbour shows up, so a phone left in a pocket stays reachable.
+    private static let centralRestoreID = "app.letterbox.central"
+    private static let peripheralRestoreID = "app.letterbox.peripheral"
 
     public let events: AsyncStream<LinkEvent>
     private let continuation: AsyncStream<LinkEvent>.Continuation
@@ -61,8 +66,15 @@ public final class BLELinkLayer: NSObject, LinkLayer, @unchecked Sendable {
         queue.async {
             guard !self.started else { return }
             self.started = true
-            self.centralManager = CBCentralManager(delegate: self, queue: self.queue)
-            self.peripheralManager = CBPeripheralManager(delegate: self, queue: self.queue)
+            #if os(iOS)
+            let centralOptions: [String: Any] = [CBCentralManagerOptionRestoreIdentifierKey: Self.centralRestoreID]
+            let peripheralOptions: [String: Any] = [CBPeripheralManagerOptionRestoreIdentifierKey: Self.peripheralRestoreID]
+            #else
+            let centralOptions: [String: Any] = [:]
+            let peripheralOptions: [String: Any] = [:]
+            #endif
+            self.centralManager = CBCentralManager(delegate: self, queue: self.queue, options: centralOptions)
+            self.peripheralManager = CBPeripheralManager(delegate: self, queue: self.queue, options: peripheralOptions)
         }
     }
 
@@ -76,6 +88,10 @@ public final class BLELinkLayer: NSObject, LinkLayer, @unchecked Sendable {
             }
             self.peripheralManager?.stopAdvertising()
             self.peripheralManager?.removeAllServices()
+            // Without this, the next start found a characteristic left over, skipped adding
+            // the service, and the phone stopped advertising after Bluetooth was turned
+            // off and on in Letterbox (it could still connect out, which hid it).
+            self.localCharacteristic = nil
             self.peripherals.removeAll()
             self.remoteCharacteristics.removeAll()
             self.subscribers.removeAll()
@@ -216,12 +232,36 @@ extension BLELinkLayer: CBCentralManagerDelegate, CBPeripheralDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         continuation.yield(.radio(radioState(central.state)))
         if central.state == .poweredOn {
+            resumeRestoredPeripherals()
             startScanning()
         } else {
             for uuid in remoteCharacteristics.keys { linkDown(.outgoing(uuid)) }
             peripherals.removeAll()
             remoteCharacteristics.removeAll()
             writeQueues.removeAll()
+        }
+    }
+
+    #if os(iOS)
+    /// Relaunched by iOS: take back the connections it kept open for us.
+    public func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
+        let restored = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] ?? []
+        for peripheral in restored.prefix(Self.maxCentralLinks) {
+            peripherals[peripheral.identifier] = peripheral
+            peripheral.delegate = self
+        }
+    }
+    #endif
+
+    /// Restored connections come back without our characteristic: find it again so the
+    /// link reports `.up` and the mesh announces over it. Ones that dropped meanwhile go.
+    private func resumeRestoredPeripherals() {
+        for (uuid, peripheral) in peripherals where remoteCharacteristics[uuid] == nil {
+            switch peripheral.state {
+            case .connected: peripheral.discoverServices([Self.serviceUUID])
+            case .connecting: break
+            default: peripherals[uuid] = nil
+            }
         }
     }
 
@@ -298,6 +338,21 @@ extension BLELinkLayer: CBCentralManagerDelegate, CBPeripheralDelegate {
 // MARK: - Peripheral role
 
 extension BLELinkLayer: CBPeripheralManagerDelegate {
+    #if os(iOS)
+    /// Relaunched by iOS: our service is still published, so reuse it rather than add a
+    /// second copy, and take back the neighbours still subscribed to it.
+    public func peripheralManager(_ peripheral: CBPeripheralManager, willRestoreState dict: [String: Any]) {
+        let services = dict[CBPeripheralManagerRestoredStateServicesKey] as? [CBMutableService] ?? []
+        guard let service = services.first(where: { $0.uuid == Self.serviceUUID }),
+              let characteristic = service.characteristics?.first(where: { $0.uuid == Self.characteristicUUID }) as? CBMutableCharacteristic
+        else { return }
+        localCharacteristic = characteristic
+        for central in characteristic.subscribedCentrals ?? [] {
+            subscribers[central.identifier] = central
+        }
+    }
+    #endif
+
     public func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         guard peripheral.state == .poweredOn else {
             for uuid in subscribers.keys { linkDown(.incoming(uuid)) }
@@ -306,7 +361,16 @@ extension BLELinkLayer: CBPeripheralManagerDelegate {
             localCharacteristic = nil
             return
         }
-        guard started, localCharacteristic == nil else { return }
+        guard started else { return }
+        if localCharacteristic != nil {
+            // Restored by iOS: report the neighbours still subscribed and make sure we're
+            // advertising again.
+            for uuid in subscribers.keys { continuation.yield(.up(Link.incoming(uuid).id)) }
+            if !peripheral.isAdvertising {
+                peripheral.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [Self.serviceUUID]])
+            }
+            return
+        }
         let characteristic = CBMutableCharacteristic(
             type: Self.characteristicUUID,
             properties: [.writeWithoutResponse, .write, .notify],

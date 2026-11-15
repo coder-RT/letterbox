@@ -3,7 +3,15 @@ import SwiftUI
 
 @main
 struct LetterboxApp: App {
-    @State private var container = AppContainer()
+    private let container: AppContainer
+
+    init() {
+        let container = AppContainer()
+        self.container = container
+        // Start here, not from a view: when iOS relaunches Letterbox in the background for a
+        // Bluetooth event (state restoration), no window is created, but the mesh must run.
+        Task { await container.start() }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -13,7 +21,6 @@ struct LetterboxApp: App {
                 #endif
                 .environment(container.store)
                 .tint(Theme.accent)
-                .task { await container.start() }
         }
         #if os(macOS)
         // Wide enough for every toolbar control (connections, channel, people, menu);
