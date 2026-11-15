@@ -45,7 +45,7 @@ final class LetterboxUITests: XCTestCase {
     private func openMore(_ app: XCUIApplication, item: String) {
         let ids = ["Privacy screen": "menu-privacy", "Envelopes": "menu-envelopes",
                    "Connections": "menu-connections", "Settings": "menu-settings",
-                   "Send outside Letterbox": "menu-outside"]
+                   "Send outside HelloLetter": "menu-outside"]
         let more = app.buttons["more-menu"]
         let opened: XCUIElement = switch item {
         case "Privacy screen": app.descendants(matching: .any).matching(identifier: "privacy-banner").firstMatch
@@ -97,6 +97,22 @@ final class LetterboxUITests: XCTestCase {
         let button = app.buttons["Done"].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 5), "Done button")
         button.tap()
+    }
+
+    /// Settings → Appearance → Classic or Pager.
+    private func chooseTheme(_ title: String, in app: XCUIApplication) {
+        openMore(app, item: "Settings")
+        let segment = app.segmentedControls["theme-picker"].buttons[title]
+        let fallback = app.buttons[title].firstMatch
+        let target = segment.waitForExistence(timeout: 5) ? segment : fallback
+        XCTAssertTrue(target.waitForExistence(timeout: 5), "Theme option \(title)")
+        // A tap while the sheet is still settling can be swallowed: tap until it's selected.
+        for _ in 0..<3 where !target.isSelected {
+            target.tap()
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        XCTAssertTrue(target.isSelected, "\(title) is selected")
+        done(app)
     }
 
     private func screenshot(_ name: String) {
@@ -220,6 +236,22 @@ final class LetterboxUITests: XCTestCase {
         XCTAssertFalse(element(containing: "Relays", in: app).exists)
     }
 
+    /// The Pager theme: chosen in Settings, keeps messages readable, and back to Classic
+    /// removes it. (The decorative LCD strip is hidden from accessibility on purpose.)
+    func testPagerTheme() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        chooseTheme("Pager", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["messages-pager"].waitForExistence(timeout: 5))
+        send("on my way", in: app)
+        XCTAssertTrue(element(containing: "on my way", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containing: "Sam heard you", in: app).waitForExistence(timeout: 10))
+        screenshot("pager-chat")
+        chooseTheme("Classic", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["messages"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["messages-pager"].exists)
+    }
+
     func testEraseEverythingAsksFirstThenStops() {
         let app = launch()
         waitForPeople(app, count: 1)
@@ -263,11 +295,11 @@ final class LetterboxUITests: XCTestCase {
 
         // Off
         app.switches["toggle-bluetooth"].switches.firstMatch.tap()
-        XCTAssertTrue(element(containing: "Turned off in Letterbox", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containing: "Turned off in HelloLetter", in: app).waitForExistence(timeout: 5))
         done(app)
         waitForPeople(app, count: 0)
         send("anyone there?", in: app)
-        XCTAssertTrue(element(containing: "Bluetooth is off in Letterbox", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containing: "Bluetooth is off in HelloLetter", in: app).waitForExistence(timeout: 5))
 
         // On again: Sam comes back and answers.
         app.buttons["connections-button"].tap()
@@ -286,7 +318,7 @@ final class LetterboxUITests: XCTestCase {
         app.switches["toggle-internet"].switches.firstMatch.tap()
         done(app)
         app.buttons["channel-button"].tap()
-        XCTAssertTrue(element(containing: "The internet is off in Letterbox", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containing: "The internet is off in HelloLetter", in: app).waitForExistence(timeout: 5))
     }
 
     // MARK: - Reaching people without Letterbox
@@ -294,7 +326,7 @@ final class LetterboxUITests: XCTestCase {
     func testInviteOpensTheShareSheet() {
         let app = launch()
         waitForPeople(app, count: 1)
-        openMore(app, item: "Send outside Letterbox")
+        openMore(app, item: "Send outside HelloLetter")
         let invite = app.buttons["outside-invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 5))
         XCTAssertTrue(element(containing: "Your message", in: app).exists || app.textViews["outside-text"].exists)
@@ -314,7 +346,7 @@ final class LetterboxUITests: XCTestCase {
         let composer = app.descendants(matching: .any).matching(identifier: "composer").firstMatch
         composer.tap()
         composer.typeText("Meet at the north cairn at 6")
-        openMore(app, item: "Send outside Letterbox")
+        openMore(app, item: "Send outside HelloLetter")
         let editor = app.textViews["outside-text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         XCTAssertTrue((editor.value as? String)?.contains("Meet at the north cairn at 6") == true, "Pre-filled with the draft")
@@ -409,9 +441,13 @@ final class LetterboxUITests: XCTestCase {
         app.navigationBars["Help and safety"].buttons.firstMatch.tap()
         done(app)
 
-        openMore(app, item: "Send outside Letterbox")
+        openMore(app, item: "Send outside HelloLetter")
         try audit(app, "Send outside", into: &problems)
         done(app)
+
+        chooseTheme("Pager", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["messages-pager"].waitForExistence(timeout: 5))
+        try audit(app, "Chat, Pager theme", decorativeLCD: true, into: &problems)
 
         XCTAssertTrue(problems.isEmpty, "Accessibility problems:\n" + problems.joined(separator: "\n"))
     }
@@ -420,7 +456,10 @@ final class LetterboxUITests: XCTestCase {
     /// so one run reports every screen.
     /// - Parameter scrolled: The screen was scrolled down, so rows near the top sit under
     ///   the bar's frosted fade. Those rows were already checked unscrolled.
-    private func audit(_ app: XCUIApplication, _ screen: String, scrolled: Bool = false,
+    /// - Parameter decorativeLCD: The Pager theme's top strip is a picture of an LCD,
+    ///   deliberately hidden from VoiceOver (its contents are in the title, the people button
+    ///   and the clock). iOS 27's audit detects text-like pixels in it.
+    private func audit(_ app: XCUIApplication, _ screen: String, scrolled: Bool = false, decorativeLCD: Bool = false,
                        into problems: inout [String]) throws {
         // Let presentation and fade-in animations finish: mid-animation colours are
         // partly transparent and would be measured as low contrast.
@@ -458,6 +497,8 @@ final class LetterboxUITests: XCTestCase {
             // shows up as an unnamed element). The unscrolled audit of the same screen
             // checks those rows in the clear, and reports unnamed problems there.
             if scrolled, issue.auditType == .contrast, element.map({ $0.frame.minY < 180 }) ?? true { return true }
+            if scrolled, issue.auditType == .dynamicType || issue.auditType == .textClipped, issue.element == nil { return true }
+            if decorativeLCD, issue.auditType == .elementDetection, issue.element == nil { return true }
             // A row cut off by the bottom of the screen is measured half-drawn. Long screens
             // are audited again scrolled to the end, where the same row is fully visible.
             if issue.auditType == .contrast, let element, element.frame.maxY > screenBottom - 4 { return true }
@@ -470,7 +511,9 @@ final class LetterboxUITests: XCTestCase {
             // Rows lower in a list get pushed off screen when the audit enlarges the text, so
             // it can't measure them and reports "partially unsupported". The largest-text
             // screenshots (testScreenshotsLargestText) show these rows do grow and wrap.
-            if issue.auditType == .dynamicType, let element, element.identifier == "row-label" { return true }
+            // The same push reports them as clipped too.
+            if issue.auditType == .dynamicType || issue.auditType == .textClipped, let element,
+               element.identifier == "row-label" { return true }
             let label = element.map { "'\($0.label)' at \(Int($0.frame.minX)),\(Int($0.frame.minY)) id=\($0.identifier) type=\($0.elementType.rawValue)" } ?? "(unnamed SwiftUI element)"
             found.append("[\(screen)] \(issue.compactDescription): \(label)")
             return true
@@ -500,7 +543,7 @@ final class LetterboxUITests: XCTestCase {
 
         // Before any other menu use: on iOS 26.5 a menu scrolled at large text sizes can keep
         // its scroll position, which moves the items near the top.
-        openMore(app, item: "Send outside Letterbox")
+        openMore(app, item: "Send outside HelloLetter")
         screenshot("\(prefix)-8-send-outside")
         done(app)
 
@@ -523,6 +566,10 @@ final class LetterboxUITests: XCTestCase {
         screenshot("\(prefix)-6-settings")
         done(app)
 
+        chooseTheme("Pager", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["messages-pager"].waitForExistence(timeout: 5))
+        screenshot("\(prefix)-9-pager")
+        chooseTheme("Classic", in: app)
 
         openMore(app, item: "Privacy screen")
         screenshot("\(prefix)-7-privacy")

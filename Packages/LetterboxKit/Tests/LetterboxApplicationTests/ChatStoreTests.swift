@@ -931,7 +931,7 @@ struct ChatStorePermissionTests {
         await store.setBluetoothAllowed(false)
         await store.submit("anyone?")
         #expect(await mesh.publicSent.isEmpty)
-        #expect(store.messages(in: .mesh).last?.text.contains("Bluetooth is off in Letterbox") == true)
+        #expect(store.messages(in: .mesh).last?.text.contains("Bluetooth is off in HelloLetter") == true)
     }
 
     @Test func privateMessagesQueueWithANoticeWhenBluetoothIsOff() async {

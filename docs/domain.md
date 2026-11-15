@@ -1,6 +1,6 @@
-# Letterbox domain map
+# HelloLetter domain map
 
-Letterbox is built around one core domain: **messaging without the internet**. Everything else either supports it or is generic plumbing. The code follows ports and adapters: the domain defines small protocols (ports), and each Apple or network API is wrapped by an adapter behind one of them. The words in the glossary below are used the same way in the app, the docs and the code.
+HelloLetter is built around one core domain: **messaging without the internet**. Everything else either supports it or is generic plumbing. The code follows ports and adapters: the domain defines small protocols (ports), and each Apple or network API is wrapped by an adapter behind one of them. The words in the glossary below are used the same way in the app, the docs and the code.
 
 ## Bounded contexts
 
@@ -19,7 +19,7 @@ Internet private messages and photos (phase 2) will join *Routing and connectivi
 
 | Term | Meaning | In code |
 |---|---|---|
-| **Peer** | A phone running Letterbox that we can currently reach, directly or through others | `Peer`, `PeerRecord` |
+| **Peer** | A phone running HelloLetter that we can currently reach, directly or through others | `Peer`, `PeerRecord` |
 | **Hop** | One phone-to-phone step. A message travels at most 7 hops | `Configuration.defaultTTL` |
 | **#nearby** | The public chat with everyone in Bluetooth reach | `ChannelID.mesh` |
 | **Private message** | An end-to-end encrypted message to one person | `PrivatePayload.message` |
@@ -33,8 +33,8 @@ Internet private messages and photos (phase 2) will join *Routing and connectivi
 | **Safety number** | 8 groups of 4 digits two people compare in person; the same on both phones | `SafetyNumber` (LetterboxCrypto) |
 | **Verified** | Someone whose safety number you compared or whose code you scanned | `ChatStore.verified` |
 | **Impostor** | Someone nearby using a verified person's name with a different key | `ChatStore.impostors` |
-| **Transport** | A way Letterbox itself sends messages: Bluetooth mesh, envelope, internet (phase 2) | `Route` |
-| **Permission** | Whether the user lets Letterbox use Bluetooth or the internet | `TransportPermissions` |
+| **Transport** | A way HelloLetter itself sends messages: Bluetooth mesh, envelope, internet (phase 2) | `Route` |
+| **Permission** | Whether the user lets HelloLetter use Bluetooth or the internet | `TransportPermissions` |
 | **Connection** | One way of communicating shown to the user, with its status: Bluetooth, internet, Wi-Fi, mobile network, satellite, location, relays, envelopes | `ConnectionKind`, `ConnectionRow` |
 | **Route** | The way a particular message will go, or why it can't go yet | `RoutePlanner.route` |
 | **Location channel** | A public chat room for a geohash area, over Nostr relays | `ChannelID.location` |

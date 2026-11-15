@@ -93,7 +93,7 @@ struct PersonView: View {
                         RowLabel("That code belongs to someone else, not \(peer.nickname). Don't mark them as verified.",
                               systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
                     case .notACode:
-                        RowLabel("That isn't a Letterbox code.", systemImage: "questionmark.circle").foregroundStyle(Theme.secondaryText)
+                        RowLabel("That isn't a HelloLetter code.", systemImage: "questionmark.circle").foregroundStyle(Theme.secondaryText)
                     }
                 }
             }

@@ -22,7 +22,7 @@ public enum ConnectionReport {
                           status: offersLocationChannels
                               ? internet(system.internet, allowed: permissions.internet)
                               : internet(system.internet, allowed: true),
-                          enables: offersLocationChannels ? "Location channels" : "Nothing in Letterbox: it works without internet"),
+                          enables: offersLocationChannels ? "Location channels" : "Nothing in HelloLetter: it works without internet"),
             ConnectionRow(kind: .wifi, title: "Wi-Fi",
                           status: wifi(system.internet),
                           enables: "Internet without using mobile data"),
@@ -31,7 +31,7 @@ public enum ConnectionReport {
                           enables: "SMS and calls from your phone's own apps, and mobile data"),
             ConnectionRow(kind: .satellite, title: "Satellite",
                           status: .notDetectable("Apps can't check this. On iPhone 14 or later, try Messages or Emergency SOS when there's no signal."),
-                          enables: "Texts and SOS with no mobile signal, outside Letterbox"),
+                          enables: "Texts and SOS with no mobile signal, outside HelloLetter"),
             ConnectionRow(kind: .location, title: "Location",
                           status: location(system.location),
                           enables: "Joining location channels"),
@@ -47,7 +47,7 @@ public enum ConnectionReport {
     }
 
     static func bluetooth(_ radio: RadioState, allowed: Bool, nearby: Int) -> ConnectionStatus {
-        guard allowed else { return .blockedByYou("Turned off in Letterbox") }
+        guard allowed else { return .blockedByYou("Turned off in HelloLetter") }
         switch radio {
         case .ready:
             switch nearby {
@@ -56,14 +56,14 @@ public enum ConnectionReport {
             default: return .working("On. \(nearby) people nearby")
             }
         case .poweredOff: return .off("Bluetooth is off. Turn it on in Control Center.")
-        case .unauthorized: return .notAllowed("Letterbox isn't allowed to use Bluetooth. Allow it in Settings.")
+        case .unauthorized: return .notAllowed("HelloLetter isn't allowed to use Bluetooth. Allow it in Settings.")
         case .unsupported: return .unavailable("This device can't do Bluetooth chat.")
         case .unknown: return .checking("Starting…")
         }
     }
 
     static func internet(_ status: InternetStatus, allowed: Bool) -> ConnectionStatus {
-        guard allowed else { return .blockedByYou("Turned off in Letterbox") }
+        guard allowed else { return .blockedByYou("Turned off in HelloLetter") }
         let lowData = status.isConstrained ? " (Low Data Mode)" : ""
         switch status.path {
         case .wifi: return .working("Connected via Wi-Fi" + lowData)
@@ -97,14 +97,14 @@ public enum ConnectionReport {
     static func location(_ access: LocationAccess) -> ConnectionStatus {
         switch access {
         case .allowed: .working("Allowed")
-        case .denied: .notAllowed("Off for Letterbox. Allow it in Settings to join location channels.")
+        case .denied: .notAllowed("Off for HelloLetter. Allow it in Settings to join location channels.")
         case .restricted: .notAllowed("Restricted on this device")
-        case .notDetermined: .off("Not asked yet. Letterbox asks when you join a location channel.")
+        case .notDetermined: .off("Not asked yet. HelloLetter asks when you join a location channel.")
         }
     }
 
     static func relayStatus(_ relays: (connected: Int, total: Int), internetAllowed: Bool, inChannel: Bool) -> ConnectionStatus {
-        guard internetAllowed else { return .blockedByYou("Paused while the internet is off in Letterbox") }
+        guard internetAllowed else { return .blockedByYou("Paused while the internet is off in HelloLetter") }
         guard inChannel else { return .off("Not in use. Join a location channel to connect.") }
         guard relays.total > 0 else { return .checking("Connecting…") }
         return relays.connected > 0
@@ -113,7 +113,7 @@ public enum ConnectionReport {
     }
 
     static func envelopeStatus(_ envelopes: EnvelopeSummary, bluetoothAllowed: Bool) -> ConnectionStatus {
-        guard bluetoothAllowed else { return .blockedByYou("Paused while Bluetooth is off in Letterbox") }
+        guard bluetoothAllowed else { return .blockedByYou("Paused while Bluetooth is off in HelloLetter") }
         let mine = envelopes.outgoing.count
         let theirs = envelopes.carryingForOthers
         if mine == 0, theirs == 0 { return .working("None right now") }

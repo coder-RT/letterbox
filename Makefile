@@ -1,4 +1,4 @@
-.PHONY: help gen test ui-test test-all security mac run-mac ios install-ios clean
+.PHONY: help gen test ui-test test-all security mac mac-zip archive-ios run-mac ios install-ios clean
 
 PROJECT := Letterbox.xcodeproj
 DERIVED := build/DerivedData
@@ -10,7 +10,7 @@ DERIVED := build/DerivedData
 DEVICE ?=
 export DEVELOPMENT_TEAM
 export SUPPORT_EMAIL
-BUNDLE_ID := app.letterbox
+BUNDLE_ID := app.helloletter
 
 help: ## List commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-12s %s\n", $$1, $$2}'
@@ -40,11 +40,28 @@ security: ## Security checks: secrets (gitleaks), dependencies (osv-scanner), SA
 	cd Packages/LetterboxKit && swift test --filter 'Security'
 	@echo "Security checks finished. Known, documented weaknesses show as known issues in the DAST suite."
 
+archive-ios: gen ## App Store build: archive (Release) and upload to App Store Connect / TestFlight. Needs the paid team in Makefile.local
+	@test -n "$(DEVELOPMENT_TEAM)" || { echo "Set DEVELOPMENT_TEAM (your paid Apple Developer team) in Makefile.local"; exit 1; }
+	xcodebuild -project $(PROJECT) -scheme Letterbox -configuration Release -destination 'generic/platform=iOS' \
+		-archivePath build/HelloLetter.xcarchive -allowProvisioningUpdates archive
+	xcodebuild -exportArchive -archivePath build/HelloLetter.xcarchive -exportOptionsPlist Config/ExportOptions.plist \
+		-exportPath build/export -allowProvisioningUpdates
+	@echo "Uploaded. It appears in App Store Connect → TestFlight after processing (usually 10–30 minutes)."
+
+mac-zip: gen ## Shareable Mac app: Release, universal, ad-hoc signed (no account), zipped in build/dist
+	rm -rf build/DerivedData-share build/dist
+	xcodebuild -project $(PROJECT) -scheme LetterboxMac -configuration Release -destination 'generic/platform=macOS' \
+		-derivedDataPath build/DerivedData-share ONLY_ACTIVE_ARCH=NO CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- \
+		DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO -quiet build
+	mkdir -p build/dist
+	ditto -c -k --keepParent build/DerivedData-share/Build/Products/Release/HelloLetter.app build/dist/HelloLetter-mac.zip
+	@echo "Ready: build/dist/HelloLetter-mac.zip (macOS 15+; recipients allow it in System Settings → Privacy & Security)"
+
 mac: gen ## Build the Mac app
 	xcodebuild -project $(PROJECT) -scheme LetterboxMac -configuration Debug -derivedDataPath $(DERIVED) -allowProvisioningUpdates build
 
 run-mac: mac ## Build and open the Mac app
-	open $(DERIVED)/Build/Products/Debug/Letterbox.app
+	open $(DERIVED)/Build/Products/Debug/HelloLetter.app
 
 ios: gen ## Build the iPhone app for your device (sign in to Xcode first)
 	xcodebuild -project $(PROJECT) -scheme Letterbox -configuration Debug -destination 'id=$(DEVICE)' -derivedDataPath $(DERIVED) -allowProvisioningUpdates build

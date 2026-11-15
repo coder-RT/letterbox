@@ -124,7 +124,7 @@ public enum RoutePlanner {
         switch kind {
         case .photo:
             guard permissions.internet else {
-                return .impossible("Photos need the internet, which is off in Letterbox. Turn it on in Connections.")
+                return .impossible("Photos need the internet, which is off in HelloLetter. Turn it on in Connections.")
             }
             guard recipientHasInternetAddress else {
                 return .impossible("Photos can only go over the internet, and you can't reach this person that way yet.")
@@ -143,9 +143,9 @@ public enum RoutePlanner {
                 return .queue("Waiting for an internet connection.")
             }
             if recipientKeyKnown || recipientNearby {
-                return .queue("Bluetooth is off in Letterbox. It will send when you turn it back on in Connections.")
+                return .queue("Bluetooth is off in HelloLetter. It will send when you turn it back on in Connections.")
             }
-            return .impossible("Bluetooth and the internet are both off in Letterbox. Turn one on in Connections.")
+            return .impossible("Bluetooth and the internet are both off in HelloLetter. Turn one on in Connections.")
         }
     }
 }

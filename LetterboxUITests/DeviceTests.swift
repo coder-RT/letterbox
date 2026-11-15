@@ -74,7 +74,7 @@ final class DeviceTests: XCTestCase {
         attachScreenshot("device-connections-bottom")
     }
 
-    /// A real AirDrop to a nearby Mac from "Send outside Letterbox". Enable with
+    /// A real AirDrop to a nearby Mac from "Send outside HelloLetter". Enable with
     /// `TEST_RUNNER_AIRDROP_TARGET=<part of the Mac's AirDrop name>`; the name is never stored.
     func testAirDropToMacFromSendOutside() throws {
         guard let target = ProcessInfo.processInfo.environment["AIRDROP_TARGET"], !target.isEmpty else {
@@ -89,7 +89,7 @@ final class DeviceTests: XCTestCase {
         entry.tap()
 
         let stamp = Date().formatted(date: .omitted, time: .standard)
-        let text = "Letterbox AirDrop test \(stamp)"
+        let text = "HelloLetter AirDrop test \(stamp)"
         let editor = app.textViews["outside-text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         editor.tap()

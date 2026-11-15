@@ -1,6 +1,47 @@
-# Letterbox features, scored
+# HelloLetter features
 
-Last scored: 2026-11-15, after the gap analysis against the reference docs (see [gap-analysis.md](gap-analysis.md)): catching up on #nearby, lock-screen alerts, background relaunch, blocking and erasing.
+Each feature has its own page: what it does, why it's there, how it works, its limits, and how it's tested. The scored table further down rates every feature.
+
+## Offline messaging
+- [#nearby: group chat over Bluetooth](nearby-chat.md)
+- [Multi-hop relay (the mesh)](multi-hop-relay.md)
+- [Private messages (end-to-end encrypted)](private-messages.md)
+- [Delivery and read receipts](delivery-and-read-receipts.md)
+- [Offline queue (messages that wait)](offline-queue.md)
+- [Envelopes: messages carried by other people](envelopes.md)
+- [Catching up on #nearby](catching-up-on-nearby.md)
+- [Lock-screen alerts](lock-screen-alerts.md)
+- [Running in the background, and relaunch by iOS](background-and-relaunch.md)
+- [Verifying someone (safety number and QR code)](verification.md)
+- [Nickname and typed commands](nickname-and-commands.md)
+- [Conversations that explain themselves](empty-conversations.md)
+
+## Safety and privacy
+- [Privacy screen](privacy-screen.md)
+- [Block someone](block.md)
+- [Report a message](report.md)
+- [Offensive-word filter](word-filter.md)
+- [Erase everything](erase-everything.md)
+- [Abuse protection](abuse-protection.md)
+- [Help and safety screen](help-and-safety.md)
+
+## Connectivity
+- [Connections panel](connections-panel.md)
+- [Bluetooth and internet switches, and automatic routing](bluetooth-and-internet-switches.md)
+- [Location channels](location-channels.md) (Debug builds only)
+
+## Reaching people without HelloLetter
+- [Send outside HelloLetter (AirDrop)](send-outside-helloletter.md)
+- [Invite someone](invite.md)
+
+## App and platform
+- [Pager theme](pager-theme.md)
+- [Accessibility](accessibility.md)
+- [Mac app](mac-app.md)
+
+# Scores
+
+Last scored: 2026-11-15, after the gap analysis against the reference docs (see [gap-analysis.md](../gap-analysis.md)): catching up on #nearby, lock-screen alerts, background relaunch, blocking and erasing.
 
 Each feature is scored 1–5 on three things:
 
@@ -24,8 +65,8 @@ Each feature is scored 1–5 on three things:
 | Signatures, forgery and replay protection | Shipped | 4 | 5 | 5 | 4.7 | Found and fixed a nonce-0 replay bug |
 | Catching up on #nearby: missed public messages (last 12 hours) from the first neighbour you meet | Shipped | 5 | 4 | 5 | 4.7 | Also carries messages between groups that never meet; signature checked; only answers to your own request |
 | Emoji over Bluetooth | Shipped | 3 | 5 | 4 | 4.0 | Text is UTF-8; no internet needed |
-| Send outside Letterbox (AirDrop or other apps, one-way) | Shipped | 4 | 4 | 4 | 4.0 | Offline to nearby Apple devices; they tap Accept and can't reply unless they install Letterbox |
-| Invite someone (share a note with how to get Letterbox) | Shipped | 4 | 5 | 4 | 4.3 | In "Send outside Letterbox" and on the empty Nearby list |
+| Send outside HelloLetter (AirDrop or other apps, one-way) | Shipped | 4 | 4 | 4 | 4.0 | Offline to nearby Apple devices; they tap Accept and can't reply unless they install HelloLetter |
+| Invite someone (share a note with how to get HelloLetter) | Shipped | 4 | 5 | 4 | 4.3 | In "Send outside HelloLetter" and on the empty Nearby list |
 | Nickname and commands (`/msg`, `/who`, `/nick`, `/clear`, `/help`) | Shipped | 3 | 5 | 5 | 4.3 | |
 | Verification: safety number, QR scan, Verified badge, impostor warning | Shipped | 4 | 4 | 4 | 4.0 | QR scan needs a real camera to test |
 | Lock-screen alerts for #nearby and private messages | Shipped | 5 | 4 | 5 | 4.7 | Local only; names and text hidden unless you choose, and always with the privacy screen on |
@@ -62,6 +103,7 @@ Each feature is scored 1–5 on three things:
 |---|---|---|---|---|---|---|
 | Privacy screen (menu, banner, tap to peek, app-switcher cover) | Shipped | 3 | 5 | 5 | 4.3 | UI test checks VoiceOver reads "Hidden message" |
 | Accessibility (audit clean on every screen, Dynamic Type, contrast, VoiceOver) | Shipped | 4 | 4 | 5 | 4.3 | See docs/design.md for the three documented exclusions |
+| Pager theme (LCD screen, seven-segment and dot-matrix type) | Shipped | 2 | 5 | 4 | 3.7 | Optional; Classic is the default |
 | iPhone app | Shipped | 5 | 4 | – | 4.5 | |
 | Mac app | Shipped | 2 | 4 | – | 3.0 | No mobile network or app-switcher cover |
 | iPad layout | Planned | 1 | – | – | – | |
@@ -76,8 +118,8 @@ These are covered by automated tests on a simulated radio, but not yet tried on 
 1. **Envelopes end to end** with three phones: A and C never meet; B walks between them. Check the message arrives and the receipt comes back.
 2. **Mobile network row** on an iPhone with and without signal, and in airplane mode.
 3. **Bluetooth toggle** off and on: the other phone should drop you, then see you again.
-4. **Background delivery:** how long a message takes to arrive with Letterbox in the background.
+4. **Background delivery:** how long a message takes to arrive with HelloLetter in the background.
 5. **Range** between two phones in open terrain, in forest and through rock.
-6. **State restoration:** with Letterbox in the background, simulate iOS closing it (see the release checklist in [gap-analysis.md](gap-analysis.md)), then bring a second phone into range: Letterbox should relaunch and the message should arrive.
+6. **State restoration:** with HelloLetter in the background, simulate iOS closing it (see the release checklist in [gap-analysis.md](../gap-analysis.md)), then bring a second phone into range: HelloLetter should relaunch and the message should arrive.
 7. **Lock-screen alert** with the phone locked: shows "New private message" only, and the name and text once you turn that on.
 8. **Catching up across groups:** A and B talk, B walks to C, and C sees what A said.

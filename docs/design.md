@@ -1,11 +1,11 @@
-# Letterbox design and accessibility
+# HelloLetter design and accessibility
 
-Letterbox is for people who are often outdoors, tired, wearing gloves, in bright sun or at night, and with no signal. The design choices follow from that.
+HelloLetter is for people who are often outdoors, tired, wearing gloves, in bright sun or at night, and with no signal. The design choices follow from that.
 
 ## Principles
 
 1. **Offline first, and say so.** The app always shows what works right now (the Connections chip) and explains in plain words why something can't be sent.
-2. **Status is never colour alone.** Every status has an icon and a word as well as a colour (Working, Off, Off in Letterbox, Not allowed).
+2. **Status is never colour alone.** Every status has an icon and a word as well as a colour (Working, Off, Off in HelloLetter, Not allowed).
 3. **Plain words, no jargon.** Use "Envelope", "Nearby" and "Safety number", not "courier packet", "mesh" or "fingerprint hash".
 4. **Nothing hidden that matters, nothing shown that doesn't.** Codes live on the person's Verify screen, not in every list.
 5. **Readable at every size.** All text uses Dynamic Type styles and wraps. Layouts switch to stacked rows at accessibility sizes.
@@ -45,7 +45,7 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | Satellite | `dot.radiowaves.up.forward` | Signal going up |
 | In direct range, via others | `dot.radiowaves.left.and.right`, `point.3.connected.trianglepath.dotted` | Direct versus hopping |
 | More | `ellipsis.circle` | Standard overflow menu |
-| Send outside Letterbox | `square.and.arrow.up` | The system's share symbol: it opens the share sheet, with AirDrop first |
+| Send outside HelloLetter | `square.and.arrow.up` | The system's share symbol: it opens the share sheet, with AirDrop first |
 | Invite someone | `person.badge.plus` | Adding a person |
 | Alerts setting | `bell.badge` | The system's notification symbol |
 | Erase everything | `trash` | Deleting, shown in red with a confirmation |
@@ -59,6 +59,34 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 - **SF Symbols:** free to use in apps on Apple platforms under the Xcode and SF Symbols licence. They **may not be used in app icons, logos or trademarks**, so the app icon must be original artwork.
 - **Lucide** (lucide.dev) is ISC-licensed. It can be bundled and redistributed in an app if the licence notice is included; some icons come from Feather (MIT). It's a fine choice for the website or docs. In the app it would look foreign next to system controls, wouldn't scale with Dynamic Type for free, and adds assets to maintain. **Decision: not used in the app.**
 
+## Pager theme
+
+An optional look (Settings → Appearance) inspired by 90s pagers. Full feature description: [features/pager-theme.md](features/pager-theme.md).
+
+**Typography**, as on real pagers:
+
+| Use | Typeface | Licence | Why |
+|---|---|---|---|
+| Top strip: clock, date, people count | DSEG7 Classic Bold (seven-segment), by keshikan | SIL OFL 1.1 (Reserved Font Name "DSEG"; embedded unmodified) | The `88:88` LCD clock everyone recognises from pagers and watches |
+| Top strip: brand | DotGothic16 (dot-matrix), by Fontworks | SIL OFL 1.1 | The 5×7-style dot matrix of pager message screens |
+| Messages, names, timestamps | System monospaced (SF Mono) | Apple | Readable, scales with Dynamic Type, full contrast |
+
+Licences ship with the app in `Letterbox/Resources/Fonts/`. The LCD fonts appear only in the top strip, which is **decorative and hidden from VoiceOver**. Apple's accessibility audit showed that dot and segment glyphs don't contrast or scale like text, and everything the strip shows is also in the title, the people button and the system clock. The strip's clock is 24-hour, because seven segments can't draw "AM/PM".
+
+**Palette** (WCAG contrast, light / dark):
+
+| Role | Light | Dark | Contrast |
+|---|---|---|---|
+| Screen | `#A9D86E` | `#0B1407` | – |
+| Ink (text, icons) on screen | `#13260C` | `#9BE564` | 9.7:1 / 12.3:1 |
+| Other people's bubbles | `#8FC455` (ink text) | `#18290F` (green text) | 7.8:1 / 10.1:1 |
+| Your bubbles (inverted) | `#1F3A14` with `#C8F08F` | `#9BE564` with `#0B1407` | 9.7:1 / 12.3:1 |
+| Dim text (timestamps) | `#2E4D1F` | `#6FA84A` | 5.8:1 / 6.6:1 |
+| "Not delivered" | `#7A0F12` | `#FF8A80` | 6.7:1 / 8.2:1 |
+| Status strip, composer bar | `#96C958` | `#13220C` | – |
+
+**App icon:** a pager drawn from plain shapes: a charcoal body, a backlit LCD with an envelope and signal arcs, and the four classic buttons (yellow, yellow, red, green). It's original artwork (no SF Symbols, which app icons may not use), 1024×1024 with no transparency.
+
 ## Colour
 
 | Token | Light | Dark | Increase Contrast | Use |
@@ -67,7 +95,7 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | Own bubble | `#1D4ED8` | `#3B63D9` (white text ≈5.3:1) | `#1E3A8A` / `#1E40AF` | Your messages |
 | Secondary text | `#45454A` (≈9.5:1) | `#ADADB2` (≈9:1) | — | Captions, timestamps, footers |
 | Good | `#1A7F37` (≈5:1) | `#4CD964` | — | Working, Verified |
-| Warning | `#B45309` (≈5:1) | `#FFB340` | — | Off in Letterbox, impostor warning |
+| Warning | `#B45309` (≈5:1) | `#FFB340` | — | Off in HelloLetter, impostor warning |
 | Bad | `#C0262D` (≈6:1) | `#FF6961` | — | Not allowed, Not delivered |
 | Sender names | Hue per person, brightness 0.42 | Brightness 0.92 | — | Tell people apart |
 
@@ -100,16 +128,16 @@ Reviewed 2026-11-15 against Steve Krug's *Don't Make Me Think, Revisited* (3rd e
 
 | Screen | Problem | Principle | Change |
 |---|---|---|---|
-| Empty chat | "No messages yet. Say hi." didn't say what #nearby is, that it needs no signal, or what happens to messages sent when nobody's around | Every screen should answer "what is this, and what can I do here?" | Each kind of conversation explains itself: #nearby says it needs no internet, who's in range, and that people arriving in the next 12 hours can catch up; alone, it offers Invite. Private chats say only the two of you can read them and that Letterbox keeps trying for 3 days. Location channels say relays see your IP |
+| Empty chat | "No messages yet. Say hi." didn't say what #nearby is, that it needs no signal, or what happens to messages sent when nobody's around | Every screen should answer "what is this, and what can I do here?" | Each kind of conversation explains itself: #nearby says it needs no internet, who's in range, and that people arriving in the next 12 hours can catch up; alone, it offers Invite. Private chats say only the two of you can read them and that HelloLetter keeps trying for 3 days. Location channels say relays see your IP |
 | Failed private message | A red mark with nothing to do about it | Make it easy to recover from errors | It says "Not delivered. Hold to send again" in words, and the long-press menu has **Send again** |
-| Send outside Letterbox | The message box was a blank white area; the disabled button below it read "Type a message to send", so it looked like the place to type | Make it obvious what can be tapped and typed in | The box shows "Your message". The button always reads "Send via AirDrop or another app" and is grey until there's text. The three notes became one footer right under the button: brief, timely and hard to miss |
+| Send outside HelloLetter | The message box was a blank white area; the disabled button below it read "Type a message to send", so it looked like the place to type | Make it obvious what can be tapped and typed in | The box shows "Your message". The button always reads "Send via AirDrop or another app" and is grey until there's text. The three notes became one footer right under the button: brief, timely and hard to miss |
 | Settings | Erase everything sat in the middle, above "How it works" | Follow conventions | Moved to the bottom, where iOS puts destructive actions |
 | Sheets opened from the "…" menu | On iOS 27 the keyboard stayed up over the sheet and hid half of Settings (found by the accessibility audit) | Don't hide what people came to see | Opening any sheet now closes the keyboard |
 | All sheets | Footers of two or three sentences | Cut half the words, then half of what's left | Footers for Alerts, Erase, your code, the safety number, envelopes, connections and invite cut to one or two short sentences, with no information lost |
 
 ### What already held up
 
-- **Screen names match what you tapped:** "…" → Send outside Letterbox opens "Send outside Letterbox"; the people count opens "Nearby"; the connection icons open "Connections".
+- **Screen names match what you tapped:** "…" → Send outside HelloLetter opens "Send outside HelloLetter"; the people count opens "Nearby"; the connection icons open "Connections".
 - **Conventions:** system sheets, Done buttons, lists, the share sheet, SF Symbols, and a composer placeholder that says where the message goes ("Message everyone nearby").
 - **Accessibility:** Apple's audit runs on every screen in the UI tests, and long screens are now also audited scrolled to the end. It caught two contrast problems and the keyboard bug in this pass. Each audited screen's screenshot is attached when the test fails. The audit also checks Dynamic Type up to the largest size and VoiceOver labels. Krug's own three-second test is making the text bigger, which the screenshot test covers.
 - **Honesty:** the Connections panel says satellite can't be checked, rather than guessing. The book's chapter on courtesy calls this telling people what they want to know.
@@ -117,19 +145,19 @@ Reviewed 2026-11-15 against Steve Krug's *Don't Make Me Think, Revisited* (3rd e
 ### Still open
 
 - **The connection icons at top left are icons only.** They're labelled for VoiceOver, but a first-time user may not know what they mean. Watch for this in the test below before adding words; the bar is tight.
-- **Nobody has used Letterbox in a test yet.** The book's strongest advice is to watch three people try it; everything above is expert review, which it calls a poor substitute.
+- **Nobody has used HelloLetter in a test yet.** The book's strongest advice is to watch three people try it; everything above is expert review, which it calls a poor substitute.
 
 ### Usability test script (three people, one morning)
 
-Krug recommends a small test with three people often over a large one rarely. Use two phones, one with Letterbox and a helper on the other, and someone who hasn't seen the app. Ask them to think aloud. Don't help: note where they hesitate.
+Krug recommends a small test with three people often over a large one rarely. Use two phones, one with HelloLetter and a helper on the other, and someone who hasn't seen the app. Ask them to think aloud. Don't help: note where they hesitate.
 
 1. **Get it test:** show the empty #nearby screen for 10 seconds. "What do you think this app does?"
 2. "Send a message to everyone around you."
 3. "Send Sam a private message that nobody else can read."
 4. "Did Sam get it? How can you tell?"
 5. "You're at the hut and don't want people reading over your shoulder. Hide your messages."
-6. "Is your phone connected to the internet right now? Can Letterbox reach anyone?"
-7. "Your friend doesn't have Letterbox. Send them 'Meet at the car park at 6'."
-8. "You're lending your phone to someone. Remove everything Letterbox knows about you."
+6. "Is your phone connected to the internet right now? Can HelloLetter reach anyone?"
+7. "Your friend doesn't have HelloLetter. Send them 'Meet at the car park at 6'."
+8. "You're lending your phone to someone. Remove everything HelloLetter knows about you."
 
 Afterwards, fix the one or two problems that tripped up most people, then test again. Record what you found here.

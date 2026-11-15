@@ -38,6 +38,8 @@ public final class ChatStore {
     public private(set) var isErased = false
     /// Offensive words in other people's messages are masked on this phone. On by default.
     public private(set) var filtersOffensiveWords: Bool
+    /// How the chat looks (Settings → Appearance).
+    public private(set) var theme: AppTheme
     /// Location channels (public chat over the internet) are part of this build. The App
     /// Store build leaves them out: Letterbox is for when there's no internet.
     public let offersLocationChannels: Bool
@@ -71,6 +73,7 @@ public final class ChatStore {
     static let internetKey = "transport.internet"
     static let notificationTextKey = "notifications.showText"
     static let filterKey = "safety.filterWords"
+    static let themeKey = "appearance.theme"
 
     public init(
         mesh: any MeshTransport,
@@ -98,6 +101,7 @@ public final class ChatStore {
         hidesMessages = settings.string(for: Self.hideMessagesKey) == "1"
         showsTextInNotifications = settings.string(for: Self.notificationTextKey) == "1"
         filtersOffensiveWords = settings.string(for: Self.filterKey) != "0"
+        theme = settings.string(for: Self.themeKey).flatMap(AppTheme.init(rawValue:)) ?? .classic
         permissions = TransportPermissions(
             bluetooth: settings.string(for: Self.bluetoothKey) != "0",
             internet: settings.string(for: Self.internetKey) != "0"
@@ -352,6 +356,11 @@ public final class ChatStore {
         }
     }
 
+    public func setTheme(_ newTheme: AppTheme) {
+        theme = newTheme
+        settings.set(newTheme.rawValue, for: Self.themeKey)
+    }
+
     public func setFiltersOffensiveWords(_ on: Bool) {
         filtersOffensiveWords = on
         settings.set(on ? "1" : "0", for: Self.filterKey)
@@ -437,7 +446,7 @@ public final class ChatStore {
     public func joinLocation(_ level: GeohashLevel) async {
         guard offersLocationChannels else { return }
         guard permissions.internet else {
-            locationError = "The internet is off in Letterbox. Turn it on in Connections to join location channels."
+            locationError = "The internet is off in HelloLetter. Turn it on in Connections to join location channels."
             return
         }
         locationError = nil
@@ -465,13 +474,13 @@ public final class ChatStore {
         switch channel {
         case .mesh:
             guard permissions.bluetooth else {
-                system("Bluetooth is off in Letterbox, so #nearby can't send. Turn it on in Connections.")
+                system("Bluetooth is off in HelloLetter, so #nearby can't send. Turn it on in Connections.")
                 return
             }
             append(await mesh.sendPublic(text))
         case .location:
             guard permissions.internet else {
-                system("The internet is off in Letterbox. Turn it on in Connections to post here.")
+                system("The internet is off in HelloLetter. Turn it on in Connections to post here.")
                 return
             }
             if let message = await locationChannels.send(text, nickname: nickname) {

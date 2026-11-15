@@ -1,17 +1,17 @@
-# Letterbox support
+# HelloLetter support
 
-Letterbox lets you chat with people nearby over Bluetooth, with no internet or mobile signal. Below are answers to common questions. If yours isn't here, email us at the address in **Settings → Help and safety**.
+HelloLetter lets you chat with people nearby over Bluetooth, with no internet or mobile signal. Below are answers to common questions. If yours isn't here, email us at the address in **Settings → Help and safety**.
 
 ## Getting started
 
 **Do I need internet, a SIM card or an account?**
-No. Letterbox works phone to phone over Bluetooth. There's no sign-up.
+No. HelloLetter works phone to phone over Bluetooth. There's no sign-up.
 
 **My friend has Bluetooth on, but I can't see them. Why?**
-They need Letterbox installed and open as well. Bluetooth alone isn't enough: Letterbox can only see other phones running Letterbox. Ask them to install it before you set off, and use **… → Send outside Letterbox → Invite** to send them a link.
+They need HelloLetter installed and open as well. Bluetooth alone isn't enough: HelloLetter can only see other phones running HelloLetter. Ask them to install it before you set off, and use **… → Send outside HelloLetter → Invite** to send them a link.
 
 **How far does it reach?**
-Roughly 10–50 metres between two phones in the open. Rock, trees and people shorten it. Messages can hop through up to 7 phones running Letterbox, so a group spread along a trail acts as a chain.
+Roughly 10–50 metres between two phones in the open. Rock, trees and people shorten it. Messages can hop through up to 7 phones running HelloLetter, so a group spread along a trail acts as a chain.
 
 **How do I check it's working?**
 Tap the icons at the top left to open **Connections**. It shows Bluetooth, how many people are in range, and what each connection lets you do.
@@ -19,27 +19,27 @@ Tap the icons at the top left to open **Connections**. It shows Bluetooth, how m
 ## Messages
 
 **What's #nearby?**
-The group chat for everyone in range. It's public: anyone nearby running Letterbox can read it.
+The group chat for everyone in range. It's public: anyone nearby running HelloLetter can read it.
 
 **I arrived late or was out of range. Did I miss everything?**
-No. When you come back in range of anyone in the group, Letterbox fetches the #nearby messages from the last 12 hours that you missed.
+No. When you come back in range of anyone in the group, HelloLetter fetches the #nearby messages from the last 12 hours that you missed.
 
 **How do I send a private message?**
 Tap the people icon, tap ⓘ next to a name, then **Send a private message**. Private messages are end-to-end encrypted: phones that pass them on can't read them.
 
 **What do the ticks and the envelope mean?**
 - A clock: waiting for the person to come in range.
-- An envelope with a number: that many other Letterbox users are carrying it to them, sealed.
+- An envelope with a number: that many other HelloLetter users are carrying it to them, sealed.
 - One tick: sent. A circled tick: on their phone. A filled one: read.
 
 **What if they're out of range?**
-Letterbox keeps trying for 3 days, and can hand the message, sealed, to people you pass, who deliver it if they meet your friend.
+HelloLetter keeps trying for 3 days, and can hand the message, sealed, to people you pass, who deliver it if they meet your friend.
 
 **"Not delivered": what now?**
-After 3 days Letterbox stops trying. Touch and hold the message and choose **Send again**.
+After 3 days HelloLetter stops trying. Touch and hold the message and choose **Send again**.
 
-**Can I message someone who doesn't have Letterbox?**
-Only one way: **… → Send outside Letterbox** sends a message through AirDrop (no internet needed, to Apple devices nearby) or another app. They can't reply in Letterbox unless they install it.
+**Can I message someone who doesn't have HelloLetter?**
+Only one way: **… → Send outside HelloLetter** sends a message through AirDrop (no internet needed, to Apple devices nearby) or another app. They can't reply in HelloLetter unless they install it.
 
 ## Staying safe
 
@@ -53,7 +53,7 @@ Yes. They're hidden by default: **Settings → Help and safety → Hide offensiv
 Turn on the **privacy screen** in the **…** menu. Messages are blurred until you tap one.
 
 **How do I know a message really comes from my friend?**
-Verify each other in person: open their page and compare the safety number, or scan their code. They get a Verified badge, and Letterbox warns you if someone else uses their name.
+Verify each other in person: open their page and compare the safety number, or scan their code. They get a Verified badge, and HelloLetter warns you if someone else uses their name.
 
 **How do I delete everything?**
 **Settings → Erase everything** removes your identity, messages, envelopes and settings from your phone.
@@ -61,14 +61,14 @@ Verify each other in person: open their page and compare the safety number, or s
 ## Battery and background
 
 **Does it work with the phone locked?**
-Yes, though iOS slows Bluetooth in the background, so messages can take longer. Alerts tell you when something arrives. If you swipe Letterbox away, it stays closed until you open it again.
+Yes, though iOS slows Bluetooth in the background, so messages can take longer. Alerts tell you when something arrives. If you swipe HelloLetter away, it stays closed until you open it again.
 
 **Will it drain my battery?**
 Bluetooth Low Energy uses little power, but relaying for others adds some. On a long trip, carry a power bank.
 
 ## Privacy
 
-Letterbox has no server, collects no data, and contains no tracking. Read the [privacy policy](privacy-policy.md).
+HelloLetter has no server, collects no data, and contains no tracking. Read the [privacy policy](privacy-policy.md).
 
 ## Contact
 

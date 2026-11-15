@@ -10,7 +10,7 @@ struct EnvelopesView: View {
         List {
             Section {
                 if store.envelopes.outgoing.isEmpty {
-                    Text("None right now. If a private message can't reach someone you've met, Letterbox seals it in an envelope and hands it to hikers you pass.")
+                    Text("None right now. If a private message can't reach someone you've met, HelloLetter seals it in an envelope and hands it to hikers you pass.")
                         .font(.callout)
                         .foregroundStyle(Theme.secondaryText)
                 }

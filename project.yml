@@ -1,6 +1,6 @@
 name: Letterbox
 options:
-  bundleIdPrefix: app.letterbox
+  bundleIdPrefix: app.helloletter
   deploymentTarget:
     iOS: "26.0"
     macOS: "15.0"
@@ -12,14 +12,14 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     # Support address for reports and the Help screen, from Makefile.local (never in git).
     LETTERBOX_SUPPORT_EMAIL: ${SUPPORT_EMAIL}
   configs:
     # Location channels (chat over the internet) are left out of Release, the App Store
-    # build: Letterbox is for when there's no internet, and it keeps App Review scope small.
+    # build: HelloLetter is for when there's no internet, and it keeps App Review scope small.
     Debug:
       LETTERBOX_LOCATION_CHANNELS: "YES"
     Release:
@@ -61,21 +61,25 @@ targets:
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.letterbox
+        PRODUCT_BUNDLE_IDENTIFIER: app.helloletter
         TARGETED_DEVICE_FAMILY: "1"
     info:
       path: Config/Info-iOS.plist
       properties:
-        CFBundleDisplayName: Letterbox
+        CFBundleDisplayName: HelloLetter
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [bluetooth-central, bluetooth-peripheral]
+        # Pager theme typefaces (SIL Open Font License; licences in Letterbox/Resources/Fonts).
+        UIAppFonts: [DSEG7Classic-Bold.ttf, DotGothic16-Regular.ttf]
         LetterboxLocationChannels: $(LETTERBOX_LOCATION_CHANNELS)
         LetterboxSupportEmail: $(LETTERBOX_SUPPORT_EMAIL)
-        NSBluetoothAlwaysUsageDescription: "Letterbox uses Bluetooth to chat with people nearby, with no internet and no accounts. Messages hop between phones running Letterbox."
-        NSLocationWhenInUseUsageDescription: "Letterbox uses your approximate location only when you join a location channel, to pick the area's chat room. Your exact position is never sent."
-        NSCameraUsageDescription: "Letterbox uses the camera only to scan a friend's code in person, to check their identity. Nothing is recorded or sent."
+        NSBluetoothAlwaysUsageDescription: "HelloLetter uses Bluetooth to chat with people nearby, with no internet and no accounts. Messages hop between phones running HelloLetter."
+        NSLocationWhenInUseUsageDescription: "HelloLetter uses your approximate location only when you join a location channel, to pick the area's chat room. Your exact position is never sent."
+        NSCameraUsageDescription: "HelloLetter uses the camera only to scan a friend's code in person, to check their identity. Nothing is recorded or sent."
 
   LetterboxUITests:
     type: bundle.ui-testing
@@ -86,7 +90,7 @@ targets:
       - target: Letterbox
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.letterbox.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: app.helloletter.uitests
         TEST_TARGET_NAME: Letterbox
         GENERATE_INFOPLIST_FILE: YES
 
@@ -95,18 +99,21 @@ targets:
     platform: macOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.letterbox.mac
-        PRODUCT_NAME: Letterbox
+        PRODUCT_BUNDLE_IDENTIFIER: app.helloletter.mac
+        PRODUCT_NAME: HelloLetter
     info:
       path: Config/Info-macOS.plist
       properties:
-        CFBundleDisplayName: Letterbox
+        CFBundleDisplayName: HelloLetter
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.social-networking
+        ATSApplicationFontsPath: "."
         LetterboxLocationChannels: $(LETTERBOX_LOCATION_CHANNELS)
         LetterboxSupportEmail: $(LETTERBOX_SUPPORT_EMAIL)
-        NSBluetoothAlwaysUsageDescription: "Letterbox uses Bluetooth to chat with people nearby, with no internet and no accounts."
-        NSLocationUsageDescription: "Letterbox uses your approximate location only when you join a location channel."
-        NSLocationWhenInUseUsageDescription: "Letterbox uses your approximate location only when you join a location channel."
+        NSBluetoothAlwaysUsageDescription: "HelloLetter uses Bluetooth to chat with people nearby, with no internet and no accounts."
+        NSLocationUsageDescription: "HelloLetter uses your approximate location only when you join a location channel."
+        NSLocationWhenInUseUsageDescription: "HelloLetter uses your approximate location only when you join a location channel."
     entitlements:
       path: Config/Letterbox-macOS.entitlements
       properties:

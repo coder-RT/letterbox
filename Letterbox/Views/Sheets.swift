@@ -58,7 +58,7 @@ struct ChannelsSheet: View {
                     Section {
                         RowLabel(store.permissions.internet
                                  ? "Location channels go through public Nostr relays, which can see your IP address. Each area uses a separate identity."
-                                 : "The internet is off in Letterbox. Turn it on in Connections to use location channels.",
+                                 : "The internet is off in HelloLetter. Turn it on in Connections to use location channels.",
                                  systemImage: "info.circle")
                             .font(.footnote)
                             .foregroundStyle(Color.primary)
@@ -135,11 +135,11 @@ struct PeopleSheet: View {
                     ContentUnavailableView(
                         "No one nearby yet",
                         systemImage: "antenna.radiowaves.left.and.right",
-                        description: Text("Letterbox finds phones running Letterbox within Bluetooth range, and people they can reach.")
+                        description: Text("HelloLetter finds phones running HelloLetter within Bluetooth range, and people they can reach.")
                     )
                     // Bluetooth chat needs Letterbox on both phones.
                     ShareLink(item: ShareText.invite(from: store.nickname)) {
-                        RowLabel("Invite someone to get Letterbox", systemImage: "person.badge.plus")
+                        RowLabel("Invite someone to get HelloLetter", systemImage: "person.badge.plus")
                     }
                     .accessibilityIdentifier("people-invite")
                 }
@@ -232,6 +232,19 @@ struct SettingsSheet: View {
                     }
                 }
                 Section {
+                    Picker("Theme", selection: Binding(get: { store.theme }, set: { store.setTheme($0) })) {
+                        ForEach(AppTheme.allCases, id: \.self) { theme in
+                            Text(theme.title).tag(theme)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("theme-picker")
+                } header: {
+                    SectionHeader("Appearance")
+                } footer: {
+                    SectionFooter("Pager: an LCD screen with a seven-segment clock and dot-matrix headings, like a 90s pager. Messages stay in a clear font.")
+                }
+                Section {
                     NavigationLink { MyCodeView() } label: {
                         RowLabel("Your safety code", systemImage: "qrcode")
                     }
@@ -268,7 +281,7 @@ struct SettingsSheet: View {
                     }
                     .accessibilityIdentifier("erase-everything")
                 } footer: {
-                    SectionFooter("Deletes everything Letterbox keeps on this phone, including who you are. Can't be undone.")
+                    SectionFooter("Deletes everything HelloLetter keeps on this phone, including who you are. Can't be undone.")
                 }
             }
             // Keep the first header clear of the bar's scroll-edge fade, and the last
@@ -290,7 +303,7 @@ struct SettingsSheet: View {
                 }
                 .accessibilityIdentifier("confirm-erase")
             } message: {
-                Text("Letterbox stops, and next time it opens you'll be someone new. People you verified will see a new safety number.")
+                Text("HelloLetter stops, and next time it opens you'll be someone new. People you verified will see a new safety number.")
             }
         }
     }

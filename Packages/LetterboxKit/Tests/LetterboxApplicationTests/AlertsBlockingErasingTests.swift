@@ -113,7 +113,7 @@ struct AlertTests {
         await settle()
         let shown = setup.alerts.shown
         #expect(shown.map(\.body) == ["New message in #nearby", "New private message", "2 new private messages"])
-        #expect(shown.allSatisfy { $0.title == "Letterbox" && !$0.body.contains("Sam") && !$0.body.contains("secret") })
+        #expect(shown.allSatisfy { $0.title == "HelloLetter" && !$0.body.contains("Sam") && !$0.body.contains("secret") })
         #expect(shown[1].conversation == shown[2].conversation, "One alert per conversation, replaced")
     }
 

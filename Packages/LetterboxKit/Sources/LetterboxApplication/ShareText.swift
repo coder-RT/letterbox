@@ -11,7 +11,7 @@ public enum ShareText {
     /// A short note asking someone to install Letterbox before going off-grid.
     public static func invite(from nickname: String) -> String {
         let name = Nickname.sanitize(nickname)
-        let intro = isPersonal(name) ? "\(name) here. I'm using Letterbox" : "I'm using Letterbox"
+        let intro = isPersonal(name) ? "\(name) here. I'm using HelloLetter" : "I'm using HelloLetter"
         return "\(intro) to chat with no internet or signal, over Bluetooth. "
             + "Get it before the trip so we can message each other offline: \(inviteLink)"
     }
@@ -21,7 +21,7 @@ public enum ShareText {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         guard addInvite else { return trimmed }
-        return trimmed + "\n\n— Sent from Letterbox. Get it to reply offline: \(inviteLink)"
+        return trimmed + "\n\n— Sent from HelloLetter. Get it to reply offline: \(inviteLink)"
     }
 
     /// Random names like "anon4821" say nothing to a friend, so they're left out.

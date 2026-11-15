@@ -1,31 +1,31 @@
-# Letterbox privacy policy
+# HelloLetter privacy policy
 
 Last updated: 15 November 2026
 
-Letterbox lets you chat with people nearby over Bluetooth, with no internet, no accounts and no phone number. This policy explains what that means for your information.
+HelloLetter lets you chat with people nearby over Bluetooth, with no internet, no accounts and no phone number. This policy explains what that means for your information.
 
-**In short:** Letterbox has no server. The people who make it never receive your messages, contacts or location, and the app contains no analytics, advertising or tracking.
+**In short:** HelloLetter has no server. The people who make it never receive your messages, contacts or location, and the app contains no analytics, advertising or tracking.
 
 ## Who we are
 
-Letterbox is published by the company named as the seller on its App Store page. You can reach us at the email address in the app (**Settings → Help and safety**) or on the App Store page.
+HelloLetter is published by an independent developer, named as the seller on its App Store page. You can reach us at the email address in the app (**Settings → Help and safety**) or on the App Store page.
 
-## What Letterbox does with your information
+## What HelloLetter does with your information
 
 ### What people nearby can see
 
-Letterbox works by phones passing messages to each other over Bluetooth. Other people running Letterbox nearby can see:
+HelloLetter works by phones passing messages to each other over Bluetooth. Other people running HelloLetter nearby can see:
 
 - **Your nickname** and your **public keys**. The keys let other phones check that messages really come from you.
 - **Messages you post in #nearby.** These are public to everyone in range, and other phones pass them on to people further away or who arrive later (for up to 12 hours, kept in memory only).
 
-**Private messages** are end-to-end encrypted. Phones that pass them on, and anyone listening to the Bluetooth signal, can't read them. The same applies to **envelopes**: private messages that other Letterbox users carry for you, sealed so only the recipient can open them.
+**Private messages** are end-to-end encrypted. Phones that pass them on, and anyone listening to the Bluetooth signal, can't read them. The same applies to **envelopes**: private messages that other HelloLetter users carry for you, sealed so only the recipient can open them.
 
-Someone nearby with the right equipment can tell that a phone is running Letterbox, and can recognise your phone by its keys while you use the same identity. To start again with a new identity, use **Erase everything** (below).
+Someone nearby with the right equipment can tell that a phone is running HelloLetter, and can recognise your phone by its keys while you use the same identity. To start again with a new identity, use **Erase everything** (below).
 
 ### What stays on your phone
 
-Letterbox stores the following only on your phone. It's never sent to us.
+HelloLetter stores the following only on your phone. It's never sent to us.
 
 | What | Why | Where |
 |---|---|---|
@@ -39,12 +39,12 @@ Letterbox stores the following only on your phone. It's never sent to us.
 
 ### Internet
 
-The App Store version of Letterbox doesn't use the internet.
+The App Store version of HelloLetter doesn't use the internet.
 
 ### Things that only happen when you choose them
 
 - **Reporting a message:** if you choose to email a report, your Mail app sends us the reported message, its sender's nickname and key, and when and where it was sent. As with any email, we also see your email address. We use reports only to deal with abuse, and delete them when they're no longer needed.
-- **Sending outside Letterbox:** when you share a message or an invite through AirDrop, Messages or another app, it's handled by that app under its own privacy terms.
+- **Sending outside HelloLetter:** when you share a message or an invite through AirDrop, Messages or another app, it's handled by that app under its own privacy terms.
 - **Scanning a safety code:** the camera is used only while you scan a friend's code in person. Nothing is recorded or sent.
 
 ### Alerts
@@ -63,12 +63,12 @@ If you've chosen in iOS settings to share analytics with app developers, Apple m
 ## Deleting your information
 
 - **Settings → Erase everything** deletes your identity keys, undelivered messages, envelopes, the people you've verified or blocked, and your settings from your phone.
-- Deleting the app removes its data. If you reinstall it, Letterbox also clears any keys iOS kept in the Keychain.
+- Deleting the app removes its data. If you reinstall it, HelloLetter also clears any keys iOS kept in the Keychain.
 - To ask about a report you emailed us, write to us from the same address.
 
 ## Children
 
-Letterbox isn't directed at children. Public chat is visible to anyone nearby.
+HelloLetter isn't directed at children. Public chat is visible to anyone nearby.
 
 ## Changes
 

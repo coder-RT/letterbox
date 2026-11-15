@@ -8,7 +8,7 @@ Think like a Nokia 3100: short messages, one job at a time, and a battery that l
 
 The four ways to send a text, from most to least everyday:
 
-1. **Letterbox:** phone to phone over Bluetooth. Needs no signal and no internet, only other people nearby running Letterbox.
+1. **HelloLetter:** phone to phone over Bluetooth. Needs no signal and no internet, only other people nearby running HelloLetter.
 2. **Plain SMS:** needs a little mobile signal, but much less than data does.
 3. **Satellite texting:** works under open sky with no mobile signal at all, on phones and plans that support it.
 4. **A plan made in advance:** works with no phone at all.
@@ -17,10 +17,10 @@ The four ways to send a text, from most to least everyday:
 
 Do all of this at home, while you still have internet. Once you're on the trail it's too late to download anything.
 
-- [ ] Everyone in the group installs Letterbox and opens it once. Someone missing it? Use **… → Send outside Letterbox → Invite them** to AirDrop a note with how to get it.
+- [ ] Everyone in the group installs HelloLetter and opens it once. Someone missing it? Use **… → Send outside HelloLetter → Invite them** to AirDrop a note with how to get it.
 - [ ] Everyone sets a nickname people will recognise: Settings → Nickname.
-- [ ] Verify each other in person: open Nearby, tap ⓘ next to your friend, and scan their code (or check the safety number matches on both screens). They get a Verified badge, and Letterbox warns you if someone else ever uses their name.
-- [ ] Send one message, and tap **Allow** when Letterbox asks to send alerts. Then a reply wakes you up with the phone in your pocket. Alerts don't show names or text unless you turn that on in Settings → Alerts.
+- [ ] Verify each other in person: open Nearby, tap ⓘ next to your friend, and scan their code (or check the safety number matches on both screens). They get a Verified badge, and HelloLetter warns you if someone else ever uses their name.
+- [ ] Send one message, and tap **Allow** when HelloLetter asks to send alerts. Then a reply wakes you up with the phone in your pocket. Alerts don't show names or text unless you turn that on in Settings → Alerts.
 - [ ] Test it: put everyone's phones in airplane mode with Bluetooth on, and send a message in #nearby.
 - [ ] Check whether your phone and plan support satellite texting, and try the demo if your phone has one.
 - [ ] Save the trail's emergency number and the ranger station's number in your contacts.
@@ -28,9 +28,9 @@ Do all of this at home, while you still have internet. Once you're on the trail 
 - [ ] Leave your route, your group and your expected return time with someone at home. Agree when they should raise the alarm.
 - [ ] Agree on the group's meeting points and turnaround time (see [When nothing works](#when-nothing-works)).
 
-## Letterbox: texting with no signal at all
+## HelloLetter: texting with no signal at all
 
-Letterbox sends texts phone to phone over Bluetooth, so it works deep in a valley with no bars and no internet. Each message can hop through up to 7 phones running Letterbox to reach someone out of your direct range.
+HelloLetter sends texts phone to phone over Bluetooth, so it works deep in a valley with no bars and no internet. Each message can hop through up to 7 phones running HelloLetter to reach someone out of your direct range.
 
 **Range.** Two phones reach each other at roughly 10–50 m in the open (approximate). Rock, dense trees and bodies cut that down. A group strung out along a trail acts as a chain: the hiker in the middle relays between the front and the back.
 
@@ -44,22 +44,22 @@ Letterbox sends texts phone to phone over Bluetooth, so it works deep in a valle
   - `/nick Ana` changes your name.
 - **Ticks on your private messages:** a clock means waiting for the person, an envelope means hikers are carrying it, one tick means sent, a circled tick means it reached their phone, a filled one means they read it.
 - **What's working right now:** tap the connection icons at the top left. The Connections panel shows Bluetooth, internet, Wi-Fi, mobile signal, location and envelopes, and what each one lets you do. Satellite can't be checked by apps, so it says so.
-- **Switches:** in the same panel you can stop Letterbox using the internet (so relays never see your IP) or Bluetooth. On the trail, leave Bluetooth on.
+- **Switches:** in the same panel you can stop HelloLetter using the internet (so relays never see your IP) or Bluetooth. On the trail, leave Bluetooth on.
 - **The eye button** blurs messages so others at the hut can't read your screen.
-- **Missed something?** When you come back within range of anyone in the group, Letterbox fetches the #nearby messages from the last 12 hours that you missed. They appear in order, with names checked.
+- **Missed something?** When you come back within range of anyone in the group, HelloLetter fetches the #nearby messages from the last 12 hours that you missed. They appear in order, with names checked.
 - **Block someone** who spams #nearby: People, ⓘ next to their name, Block.
 
 **Limits to know**
 
-- In the background, or with the phone locked, Letterbox keeps listening, but iOS slows Bluetooth down, so messages can take longer. If iOS closes it to save memory, it starts again when someone comes in range. If you swipe it away yourself, it stays closed until you open it.
+- In the background, or with the phone locked, HelloLetter keeps listening, but iOS slows Bluetooth down, so messages can take longer. If iOS closes it to save memory, it starts again when someone comes in range. If you swipe it away yourself, it stays closed until you open it.
 - Conversations live only in memory. After a restart, #nearby refills from the people around you; your own undelivered private messages are saved and keep trying.
 - A private message to someone out of range waits on your phone for up to 3 days, and goes as soon as they come within reach.
-- **Other hikers can carry it in an envelope.** If you've met the person before, Letterbox seals the message in an envelope and hands copies to people who pass you. When one of them meets your friend, it's delivered. An envelope icon with a number next to your message means that many hikers are carrying it. They can't read it.
+- **Other hikers can carry it in an envelope.** If you've met the person before, HelloLetter seals the message in an envelope and hands copies to people who pass you. When one of them meets your friend, it's delivered. An envelope icon with a number next to your message means that many hikers are carrying it. They can't read it.
 - **See your envelopes:** tap the connection icons at the top left, then Envelopes. You'll see yours on their way, and how many you carry for others.
 - So a group that splits up can still swap messages: anyone walking between the groups carries them across.
 - Location channels need internet, so they won't work on the trail. Use #nearby.
-- A question mark next to a name means Letterbox couldn't confirm who sent that message.
-- **Someone without Letterbox?** Bluetooth chat needs the app on both phones. Use **… → Send outside Letterbox** to AirDrop them a message: it works with no internet to iPhones, iPads and Macs nearby, and they tap Accept. It's one-way, so they can't reply in Letterbox.
+- A question mark next to a name means HelloLetter couldn't confirm who sent that message.
+- **Someone without HelloLetter?** Bluetooth chat needs the app on both phones. Use **… → Send outside HelloLetter** to AirDrop them a message: it works with no internet to iPhones, iPads and Macs nearby, and they tap Accept. It's one-way, so they can't reply in HelloLetter.
 
 ## Plain SMS: one bar is often enough
 
@@ -99,7 +99,7 @@ A plan agreed before you split up works with dead phones. Settle these at the tr
 
 - **Meeting points:** name two, such as the bridge and the car park. Go to the first; if no one comes within 30 minutes, go to the second.
 - **Turnaround time:** a clock time when everyone heads back, wherever they are.
-- **Check-in times:** for example, a text or Letterbox message on the hour whenever you can.
+- **Check-in times:** for example, a text or HelloLetter message on the hour whenever you can.
 - **If you're lost or separated:** stay where you are, somewhere visible. Searchers find people who stay put.
 
 Whistle signals carry much farther than shouting and use no battery:
@@ -120,7 +120,7 @@ If the call won't connect:
 
 1. Text the emergency number by SMS, if your country's service accepts texts.
 2. Use emergency SOS via satellite, if your phone has it.
-3. Ask someone on Letterbox who has signal to call for you. A message can hop along the group to whoever is highest up the trail.
+3. Ask someone on HelloLetter who has signal to call for you. A message can hop along the group to whoever is highest up the trail.
 
 What to say, in this order:
 
@@ -128,15 +128,15 @@ What to say, in this order:
 - **What happened**, and how many people are hurt.
 - **How many are in your group**, and your phone's battery level.
 
-Letterbox is not an emergency service. No one is monitoring it, and it only reaches people near you who have the app open.
+HelloLetter is not an emergency service. No one is monitoring it, and it only reaches people near you who have the app open.
 
 ## Save your battery
 
 A phone hunting for signal it can't find drains fastest of all, so treat it like a Nokia 3100: on for a reason, off the rest of the time.
 
-- **Airplane mode, then turn Bluetooth back on.** Letterbox keeps working, and the phone stops searching for masts.
+- **Airplane mode, then turn Bluetooth back on.** HelloLetter keeps working, and the phone stops searching for masts.
 - **Turn mobile service on only at check-in times**, ideally from high ground, to send and receive SMS.
-- **Take turns being the listener.** One person keeps Letterbox open as the group's relay; the rest open it at check-in times. Swap every hour or two.
+- **Take turns being the listener.** One person keeps HelloLetter open as the group's relay; the rest open it at check-in times. Swap every hour or two.
 - **Low Power Mode on**, screen brightness down.
 - **Keep the phone warm.** Cold batteries die early; carry it in an inside pocket, not on a pack strap.
 - **Carry a power bank and cable**, and top up at breaks rather than waiting for 5%.
@@ -147,10 +147,10 @@ Screenshot or print this before you leave.
 
 | Situation | What to use |
 | --- | --- |
-| Group nearby, no signal | Letterbox #nearby |
-| One friend nearby, private | Letterbox private message, or `/msg name text` |
+| Group nearby, no signal | HelloLetter #nearby |
+| One friend nearby, private | HelloLetter private message, or `/msg name text` |
 | Friend far away, one bar of signal | SMS under 160 characters, one person at a time |
 | No signal, open sky | Satellite texting, if your phone has it |
 | Separated, phones dead | Go to the meeting point; whistle 1 = where are you, 2 = come here |
-| Someone hurt | Call 112 or 911 → SOS via satellite → relay via Letterbox to whoever has signal |
+| Someone hurt | Call 112 or 911 → SOS via satellite → relay via HelloLetter to whoever has signal |
 | Battery low | Airplane mode + Bluetooth on, Low Power Mode, take turns listening |

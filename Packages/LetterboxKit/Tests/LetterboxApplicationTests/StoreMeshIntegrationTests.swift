@@ -115,10 +115,10 @@ struct StoreMeshIntegrationTests {
         await world.store.setBluetoothAllowed(false)
         #expect(world.store.peers.isEmpty)
         await world.store.submit("anyone?")
-        #expect(world.store.messages(in: .mesh).last?.text.contains("Bluetooth is off in Letterbox") == true)
+        #expect(world.store.messages(in: .mesh).last?.text.contains("Bluetooth is off in HelloLetter") == true)
         try await Task.sleep(for: .milliseconds(300))
         #expect(!sam.inbox.contains { $0.text == "anyone?" })
-        #expect(world.store.connectionRows.first { $0.kind == .bluetooth }?.status == .blockedByYou("Turned off in Letterbox"))
+        #expect(world.store.connectionRows.first { $0.kind == .bluetooth }?.status == .blockedByYou("Turned off in HelloLetter"))
 
         // On again: Sam comes back, and messages flow both ways.
         await world.store.setBluetoothAllowed(true)

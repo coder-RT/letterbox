@@ -2,18 +2,18 @@ import Foundation
 import Testing
 @testable import LetterboxApplication
 
-@Suite("Share text for people without Letterbox")
+@Suite("Share text for people without HelloLetter")
 struct ShareTextTests {
     @Test func inviteHasTheLinkAndANameOnlyWhenItMeansSomething() {
         let anonymous = ShareText.invite(from: "anon4821")
         #expect(anonymous.contains(ShareText.inviteLink))
         #expect(!anonymous.contains("anon4821"))
-        #expect(anonymous.hasPrefix("I'm using Letterbox"))
+        #expect(anonymous.hasPrefix("I'm using HelloLetter"))
 
         let named = ShareText.invite(from: "  Ana\n")
-        #expect(named.hasPrefix("Ana here. I'm using Letterbox"))
+        #expect(named.hasPrefix("Ana here. I'm using HelloLetter"))
         #expect(named.contains("no internet or signal"))
-        #expect(ShareText.invite(from: "").hasPrefix("I'm using Letterbox"))
+        #expect(ShareText.invite(from: "").hasPrefix("I'm using HelloLetter"))
     }
 
     @Test func outsideMessagesAreTrimmedAndEmptyOnesRefused() {
@@ -26,7 +26,7 @@ struct ShareTextTests {
         let plain = ShareText.outside("hello", addInvite: false)
         let withInvite = ShareText.outside("hello", addInvite: true)
         #expect(plain == "hello")
-        #expect(withInvite?.hasPrefix("hello\n\n— Sent from Letterbox") == true)
+        #expect(withInvite?.hasPrefix("hello\n\n— Sent from HelloLetter") == true)
         #expect(withInvite?.hasSuffix(ShareText.inviteLink) == true)
     }
 

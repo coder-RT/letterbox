@@ -14,7 +14,7 @@ struct HelpView: View {
                 }
                 .accessibilityIdentifier("filter-toggle")
                 RowLabel("To block or report someone, touch and hold one of their messages.", systemImage: "hand.tap")
-                RowLabel("Nobody at Letterbox sees your messages: there's no server. A report is sent only if you email it.",
+                RowLabel("Nobody at HelloLetter sees your messages: there's no server. A report is sent only if you email it.",
                          systemImage: "lock")
             } header: {
                 SectionHeader("Staying safe")
@@ -23,9 +23,9 @@ struct HelpView: View {
             }
 
             Section {
-                if let email = BuildSettings.supportEmail, let url = URL(string: "mailto:\(email)?subject=Letterbox") {
+                if let email = BuildSettings.supportEmail, let url = URL(string: "mailto:\(email)?subject=HelloLetter") {
                     Link(destination: url) {
-                        RowLabel("Email the Letterbox team", systemImage: "envelope")
+                        RowLabel("Email the HelloLetter team", systemImage: "envelope")
                     }
                     .accessibilityIdentifier("contact-email")
                 }
@@ -44,7 +44,7 @@ struct HelpView: View {
             } header: {
                 SectionHeader("Contact")
             } footer: {
-                SectionFooter("Letterbox \(BuildSettings.appVersion)")
+                SectionFooter("HelloLetter \(BuildSettings.appVersion)")
             }
         }
         .contentMargins(.top, 24, for: .scrollContent)

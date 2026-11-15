@@ -26,7 +26,7 @@ public enum NotificationText {
             case (false, false): "New message in #nearby"
             case (false, true): "\(count) new messages in #nearby"
             }
-            return MessageAlert(conversation: key, title: "Letterbox", body: body)
+            return MessageAlert(conversation: key, title: "HelloLetter", body: body)
         }
         let title = isPrivate ? message.senderName : "\(message.senderName) in #nearby"
         let more = count > 1 ? " (+\(count - 1) more)" : ""

@@ -23,11 +23,11 @@ struct ConnectionsSheet: View {
                         .accessibilityIdentifier("toggle-internet")
                     }
                 } header: {
-                    SectionHeader("Letterbox may use")
+                    SectionHeader("HelloLetter may use")
                 } footer: {
                     SectionFooter(store.offersLocationChannels
-                        ? "Letterbox picks the best allowed way for each message. With the internet off, relays never see your IP address."
-                        : "Letterbox works over Bluetooth only. It never uses the internet.")
+                        ? "HelloLetter picks the best allowed way for each message. With the internet off, relays never see your IP address."
+                        : "HelloLetter works over Bluetooth only. It never uses the internet.")
                 }
 
                 Section(header: SectionHeader("Right now")) {
@@ -116,7 +116,7 @@ private struct ConnectionRowView: View {
         switch status {
         case .working: "Working"
         case .off: "Off"
-        case .blockedByYou: "Off in Letterbox"
+        case .blockedByYou: "Off in HelloLetter"
         case .notAllowed: "Not allowed"
         case .unavailable: "Unavailable"
         case .notDetectable: "Unknown"

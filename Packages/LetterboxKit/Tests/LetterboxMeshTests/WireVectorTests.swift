@@ -79,7 +79,7 @@ struct WireVectorTests {
         if ProcessInfo.processInfo.environment["LETTERBOX_WRITE_VECTORS"] == "1" {
             let document: [String: Any] = [
                 "_comment": [
-                    "Golden vectors for the Letterbox wire format (packet version \(Packet.version), magic \"LB\").",
+                    "Golden vectors for the HelloLetter wire format (packet version \(Packet.version), magic \"LB\").",
                     "Generated from the Swift implementation and asserted by WireVectorTests, so they can't drift",
                     "from the code without a test failing. Hex is lowercase; integers are big-endian.",
                     "Inputs are synthetic: noise private 01..20, signing private 21..40, other noise private 41..60,",

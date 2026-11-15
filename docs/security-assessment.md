@@ -1,4 +1,4 @@
-# Letterbox security assessment
+# HelloLetter security assessment
 
 | | |
 |---|---|
@@ -31,7 +31,7 @@ All 11 mesh DAST tests and 4 catch-up attack tests assert the fixed behaviour; n
 
 ## Summary (at the time of the assessment)
 
-Letterbox has **no critical or high-severity vulnerabilities**: no hardcoded secrets, no known-vulnerable dependencies, no static-analysis findings, no way to forge or read another person's messages, and the app survived every crash and fuzzing attack thrown at it.
+HelloLetter has **no critical or high-severity vulnerabilities**: no hardcoded secrets, no known-vulnerable dependencies, no static-analysis findings, no way to forge or read another person's messages, and the app survived every crash and fuzzing attack thrown at it.
 
 The weaknesses found are **denial of service by someone in Bluetooth range** and **privacy limits of the protocol**:
 
@@ -79,7 +79,7 @@ Three of the four medium findings were **confirmed dynamically**: attacks agains
 | Binary and configuration review | Release build: `strings`, `otool`, `nm`, `codesign`, Info.plist | OPR-002, REL-004 |
 | Security regression tests | Existing forgery, replay and tamper tests (323 package tests, 11 UI tests) | TEST-005 |
 
-**About DAST for this app.** The DSOVS DAST tools (ZAP, Nuclei) scan web applications over HTTP. Letterbox has no web server. Its running attack surface is the Bluetooth mesh protocol and the relay WebSocket traffic, so DAST here means attacking a running engine with hostile frames, as a malicious phone nearby would. These suites run on demand (`make security`), which is DSOVS level 1.
+**About DAST for this app.** The DSOVS DAST tools (ZAP, Nuclei) scan web applications over HTTP. HelloLetter has no web server. Its running attack surface is the Bluetooth mesh protocol and the relay WebSocket traffic, so DAST here means attacking a running engine with hostile frames, as a malicious phone nearby would. These suites run on demand (`make security`), which is DSOVS level 1.
 
 ## Findings
 
@@ -110,11 +110,11 @@ Each new packet is relayed to every neighbour, up to 7 hops.
 
 ### SEC-04 Announces broadcast a stable identity in clear text (Medium, privacy)
 
-Announces carry your nickname and long-term public keys, unencrypted. The Bluetooth service ID is also fixed for every Letterbox phone.
+Announces carry your nickname and long-term public keys, unencrypted. The Bluetooth service ID is also fixed for every HelloLetter phone.
 - **Evidence:** code review (`AnnouncePayload`, `BLELinkLayer.serviceUUID`); already noted in the README.
 - **Impact:**
   - A passive listener can recognise the same person across days, even though the PeerID changes on every launch.
-  - Anyone can tell a phone runs Letterbox.
+  - Anyone can tell a phone runs HelloLetter.
 - **Fix:** rotate announce identities and reveal long-term keys only inside the encrypted handshake (bitchat's `PEER-ID-ROTATION.md` is a reference). Consider rotating the advertised service data. This is a protocol change, so it needs a version bump.
 
 ### SEC-05 Envelope privacy limits (Low, by design)
@@ -128,7 +128,7 @@ Announces carry your nickname and long-term public keys, unencrypted. The Blueto
 
 `swift-secp256k1` is pinned at 0.24.0; the latest is 0.25.1.
 - **0.25.0** changed code paths that could abort on attacker-controlled input so they throw errors instead. For example, x-only keys are now validated when they're created.
-- **The only published advisory** (GHSA-7g3x-fj89-693j) affects 0.25.0's MuSig API only, which Letterbox doesn't use.
+- **The only published advisory** (GHSA-7g3x-fj89-693j) affects 0.25.0's MuSig API only, which HelloLetter doesn't use.
 - **Evidence:**
   - osv-scanner: no known vulnerabilities in 0.24.0.
   - `SecurityEventKeyFuzzTests`: 2,000 Nostr events with random public keys, about half of them invalid curve points, were all **rejected without a crash**. Not exploitable today.
@@ -154,12 +154,12 @@ The list of envelopes already opened, and the list of private message IDs alread
 - **Evidence:** `Clipboard.copy` in `MessageList.swift`.
 - **Fix:** on iOS, `UIPasteboard.general.setItems(_, options: [.localOnly: true, .expirationDate: now + 2 min])`.
 
-**Note on sharing outside Letterbox (added later):** "Send outside Letterbox" and "Send via AirDrop…" hand text to the system share sheet. AirDrop is encrypted between the two devices, but Messages, Mail and other apps send it outside Letterbox's end-to-end encryption, and the sheet says so. Sharing is offered only for your own messages, and never while the privacy screen hides them (UI test `testOwnMessageCanBeSentViaAirDropOnlyWhileVisible`).
+**Note on sharing outside HelloLetter (added later):** "Send outside HelloLetter" and "Send via AirDrop…" hand text to the system share sheet. AirDrop is encrypted between the two devices, but Messages, Mail and other apps send it outside HelloLetter's end-to-end encryption, and the sheet says so. Sharing is offered only for your own messages, and never while the privacy screen hides them (UI test `testOwnMessageCanBeSentViaAirDropOnlyWhileVisible`).
 
 ### SEC-10 Test-only code is linked into Release builds (Low)
 
 The UI-test mode is compiled out of Release: `strings` finds no `-ui-testing` flag and no `UITestWorld`. But the `LetterboxTestSupport` library is still linked, so `InMemoryRadio`, `SimulatedPhone` and `ScriptedConnectivityMonitor` ship in the binary unused.
-- **Evidence:** a Release build, then `strings -a Letterbox | grep …`.
+- **Evidence:** a Release build, then `strings -a HelloLetter | grep …`.
 - **Fix:** link `LetterboxTestSupport` only in Debug, with a debug-only target or a build setting, or move the simulated world into a debug-only module.
 
 ### SEC-11 First announce wins a PeerID (Low)

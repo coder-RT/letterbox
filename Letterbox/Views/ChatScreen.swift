@@ -31,10 +31,12 @@ struct ChatScreen: View {
             VStack(spacing: 0) {
                 RadioBanner(state: store.radio)
                 if store.hidesMessages { PrivacyBanner() }
+                if store.theme == .pager { PagerStatusBar() }
                 MessageList(messages: store.messages(in: store.selectedChannel), hidesText: store.hidesMessages,
                             envelopes: store.envelopes,
                             emptyState: AnyView(ChatEmptyState(channel: store.selectedChannel)),
                             sendAgain: { message in Task { await store.sendAgain(message) } },
+                            theme: store.theme,
                             report: { message in
                                 // Open the confirmation once the long-press menu has closed:
                                 // presented during its closing animation, it can be dropped.
@@ -119,10 +121,10 @@ struct ChatScreen: View {
     private func reportExplanation(_ message: ChatMessage) -> String {
         let action = canBlock(message)
             ? "You won't see anything \(message.senderName) sends. They aren't told."
-            : "Letterbox couldn't confirm who sent this, so only this message is hidden."
+            : "HelloLetter couldn't confirm who sent this, so only this message is hidden."
         return BuildSettings.supportEmail == nil
             ? action
-            : action + " An emailed report goes to the Letterbox team, and is sent once you have signal."
+            : action + " An emailed report goes to the HelloLetter team, and is sent once you have signal."
     }
 
     @ToolbarContentBuilder
@@ -176,7 +178,7 @@ struct ChatScreen: View {
                 // Reaching people without Letterbox (invite, or a one-way AirDrop message).
                 // One entry, so the menu stays short enough at the largest text sizes.
                 Button { sheet = .outside } label: {
-                    Label("Send outside Letterbox…", systemImage: "square.and.arrow.up")
+                    Label("Send outside HelloLetter…", systemImage: "square.and.arrow.up")
                 }
                 .accessibilityIdentifier("menu-outside")
                 Divider()
@@ -219,12 +221,17 @@ struct ChatScreen: View {
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TextField(placeholder, text: $draft, axis: .vertical)
+            TextField(text: $draft, axis: .vertical) {
+                Text(placeholder).foregroundStyle(isPager ? PagerStyle.dim : Theme.secondaryText)
+            }
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
+                .font(isPager ? PagerStyle.message : .body)
+                .foregroundStyle(isPager ? PagerStyle.ink : Color.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 18))
+                .background(isPager ? AnyShapeStyle(PagerStyle.screen) : AnyShapeStyle(.quaternary.opacity(0.6)),
+                            in: RoundedRectangle(cornerRadius: isPager ? 6 : 18))
                 .focused($composerFocused)
                 .onSubmit(send)
                 .accessibilityIdentifier("composer")
@@ -235,7 +242,9 @@ struct ChatScreen: View {
                 Image(systemName: "arrow.up.circle.fill").font(.system(size: 30))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Theme.accent)
+            .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty
+                ? (isPager ? PagerStyle.dim : Color.secondary)
+                : (isPager ? PagerStyle.ink : Theme.accent))
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
             .accessibilityLabel("Send")
             .accessibilityIdentifier("send-button")
@@ -243,8 +252,10 @@ struct ChatScreen: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.bar)
+        .background(isPager ? AnyShapeStyle(PagerStyle.strip) : AnyShapeStyle(.bar))
     }
+
+    private var isPager: Bool { store.theme == .pager }
 
     private var placeholder: String {
         switch store.selectedChannel {
@@ -308,7 +319,7 @@ private struct ChatEmptyState: View {
         VStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(.title)
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(.tint)
                 .accessibilityHidden(true)
             Text(title)
                 .font(.headline)
@@ -322,7 +333,7 @@ private struct ChatEmptyState: View {
             }
             if channel == .mesh, store.peers.isEmpty {
                 ShareLink(item: ShareText.invite(from: store.nickname)) {
-                    Label("Invite someone to get Letterbox", systemImage: "person.badge.plus")
+                    Label("Invite someone to get HelloLetter", systemImage: "person.badge.plus")
                 }
                 .buttonStyle(.bordered)
                 .padding(.top, 4)
@@ -354,8 +365,8 @@ private struct ChatEmptyState: View {
 
     private var explanation: String {
         switch channel {
-        case .mesh: "Chat with everyone around you who has Letterbox. No internet or signal needed."
-        case .direct: "Only the two of you can read these. If they're out of range, Letterbox keeps trying for 3 days."
+        case .mesh: "Chat with everyone around you who has HelloLetter. No internet or signal needed."
+        case .direct: "Only the two of you can read these. If they're out of range, HelloLetter keeps trying for 3 days."
         case .location: "Public chat for this area, over the internet. Relays can see your IP address."
         }
     }
@@ -376,7 +387,7 @@ private struct ErasedScreen: View {
         ContentUnavailableView {
             Label("Everything is erased", systemImage: "trash")
         } description: {
-            Text("Your identity, messages, envelopes and settings are gone from this device. Close Letterbox. Next time it opens, you'll start as someone new.")
+            Text("Your identity, messages, envelopes and settings are gone from this device. Close HelloLetter. Next time it opens, you'll start as someone new.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
@@ -400,7 +411,7 @@ private struct RadioBanner: View {
     private var message: String? {
         switch state {
         case .poweredOff: "Bluetooth is off. Turn it on to chat with people nearby."
-        case .unauthorized: "Letterbox can't use Bluetooth. Allow it in Settings."
+        case .unauthorized: "HelloLetter can't use Bluetooth. Allow it in Settings."
         case .unsupported: "This device doesn't support Bluetooth chat."
         case .unknown, .ready: nil
         }

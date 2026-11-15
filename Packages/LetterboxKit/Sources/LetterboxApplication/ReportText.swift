@@ -7,7 +7,7 @@ import LetterboxDomain
 /// person reporting.
 public enum ReportText {
     public static func subject(for message: ChatMessage) -> String {
-        "Letterbox report: message from \(message.senderName)"
+        "HelloLetter report: message from \(message.senderName)"
     }
 
     public static func body(for message: ChatMessage, appVersion: String) -> String {
@@ -17,7 +17,7 @@ public enum ReportText {
         case .direct: "a private message"
         }
         return """
-        I'm reporting this message in Letterbox.
+        I'm reporting this message in HelloLetter.
 
         From: \(message.senderName)
         Sender's key: \(message.senderKey)
@@ -29,7 +29,7 @@ public enum ReportText {
 
         (Optional: tell us what's wrong.)
 
-        Letterbox \(appVersion)
+        HelloLetter \(appVersion)
         """
     }
 

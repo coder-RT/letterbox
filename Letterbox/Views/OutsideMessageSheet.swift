@@ -22,7 +22,7 @@ struct OutsideMessageSheet: View {
             Form {
                 Section {
                     ShareLink(item: ShareText.invite(from: nickname)) {
-                        RowLabel("Invite them to get Letterbox", systemImage: "person.badge.plus")
+                        RowLabel("Invite them to get HelloLetter", systemImage: "person.badge.plus")
                     }
                     .accessibilityIdentifier("outside-invite")
                 } header: {
@@ -48,7 +48,7 @@ struct OutsideMessageSheet: View {
                         }
                         .accessibilityLabel("Message")
                         .accessibilityIdentifier("outside-text")
-                    Toggle("Add how to get Letterbox", isOn: $addInvite)
+                    Toggle("Add how to get HelloLetter", isOn: $addInvite)
                         .accessibilityIdentifier("outside-add-invite")
                 } header: {
                     SectionHeader("Or send a one-way message")
@@ -73,11 +73,11 @@ struct OutsideMessageSheet: View {
                         .accessibilityIdentifier("outside-share-waiting")
                     }
                 } footer: {
-                    SectionFooter("AirDrop works with no internet to Apple devices nearby; they tap Accept. They can only reply if they get Letterbox. Messages and Mail send it over the internet, outside Letterbox's encryption.")
+                    SectionFooter("AirDrop works with no internet to Apple devices nearby; they tap Accept. They can only reply if they get HelloLetter. Messages and Mail send it over the internet, outside HelloLetter's encryption.")
                 }
             }
             .contentMargins(.top, 24, for: .scrollContent)
-            .navigationTitle("Send outside Letterbox")
+            .navigationTitle("Send outside HelloLetter")
             .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

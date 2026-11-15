@@ -50,8 +50,8 @@ struct ReportTextTests {
         #expect(components.scheme == "mailto" && components.path == "safety@example.org")
         let body = components.queryItems?.first { $0.name == "body" }?.value ?? ""
         #expect(body.contains("something nasty") && body.contains("Mallory") && body.contains(String(repeating: "c", count: 64)))
-        #expect(body.contains("#nearby") && body.contains("Letterbox 0.1.0"))
-        #expect(components.queryItems?.first { $0.name == "subject" }?.value == "Letterbox report: message from Mallory")
+        #expect(body.contains("#nearby") && body.contains("HelloLetter 0.1.0"))
+        #expect(components.queryItems?.first { $0.name == "subject" }?.value == "HelloLetter report: message from Mallory")
     }
 
     @Test func noAddressMeansNoEmail() {
@@ -162,6 +162,23 @@ struct StoreSafetyTests {
         #expect(store.location == nil && store.selectedChannel == .mesh)
         let kinds = store.connectionRows.map(\.kind)
         #expect(!kinds.contains(.location) && !kinds.contains(.relays))
-        #expect(store.connectionRows.first { $0.kind == .internet }?.enables == "Nothing in Letterbox: it works without internet")
+        #expect(store.connectionRows.first { $0.kind == .internet }?.enables == "Nothing in HelloLetter: it works without internet")
+    }
+}
+
+@Suite("Appearance")
+@MainActor
+struct AppearanceTests {
+    @Test func themeIsClassicByDefaultAndRemembered() {
+        let settings = InMemorySettingsStore()
+        let store = ChatStore(mesh: StillMesh(), locationChannels: NoChannels(), locationProvider: HereLocation(), settings: settings)
+        #expect(store.theme == .classic)
+        store.setTheme(.pager)
+        #expect(store.theme == .pager)
+        let again = ChatStore(mesh: StillMesh(), locationChannels: NoChannels(), locationProvider: HereLocation(), settings: settings)
+        #expect(again.theme == .pager, "Survives a restart")
+        settings.set("neon", for: ChatStore.themeKey)
+        #expect(ChatStore(mesh: StillMesh(), locationChannels: NoChannels(), locationProvider: HereLocation(), settings: settings).theme == .classic,
+                "An unknown value falls back to Classic")
     }
 }
