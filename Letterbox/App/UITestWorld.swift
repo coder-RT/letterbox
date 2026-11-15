@@ -12,6 +12,7 @@ import LetterboxTestSupport
 ///
 /// Environment:
 /// - `UITEST_CONNECTIVITY`: `wifi` (default), `offline`, `cellular5G`
+/// - `UITEST_LOCATION_CHANNELS`: `off` for the App Store build's behaviour
 /// - `UITEST_SCENARIO`:
 ///   - `nearby` (default): Sam is in range and answers.
 ///   - `envelope`: Dave is in range for a few seconds and then leaves; later Bob, a
@@ -42,7 +43,8 @@ final class UITestWorld {
             locationProvider: NoLocationProvider(),
             settings: InMemorySettingsStore(),
             connectivity: ScriptedConnectivityMonitor(ScriptedConnectivityMonitor.named(environment["UITEST_CONNECTIVITY"])),
-            appState: InMemoryBlobStore()
+            appState: InMemoryBlobStore(),
+            offersLocationChannels: environment["UITEST_LOCATION_CHANNELS"] != "off"
         )
         switch scenario {
         case "alone":

@@ -8,6 +8,9 @@ struct ChatScreen: View {
     @State private var sheet: Sheet?
     @FocusState private var composerFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
+    /// The message being reported, while the confirmation is up.
+    @State private var reporting: ChatMessage?
 
     enum Sheet: String, Identifiable {
         case channels, people, settings, connections, envelopes, outside
@@ -31,7 +34,15 @@ struct ChatScreen: View {
                 MessageList(messages: store.messages(in: store.selectedChannel), hidesText: store.hidesMessages,
                             envelopes: store.envelopes,
                             emptyState: AnyView(ChatEmptyState(channel: store.selectedChannel)),
-                            sendAgain: { message in Task { await store.sendAgain(message) } })
+                            sendAgain: { message in Task { await store.sendAgain(message) } },
+                            report: { message in
+                                // Open the confirmation once the long-press menu has closed:
+                                // presented during its closing animation, it can be dropped.
+                                Task {
+                                    try? await Task.sleep(for: .milliseconds(350))
+                                    reporting = message
+                                }
+                            })
                 composer
             }
             .inlineTitle()
@@ -59,6 +70,21 @@ struct ChatScreen: View {
             }
         }
         .overlay { if showsPrivacyCover { PrivacyCover() } }
+        .confirmationDialog(reportTitle, isPresented: Binding(get: { reporting != nil }, set: { if !$0 { reporting = nil } }),
+                            titleVisibility: .visible, presenting: reporting) { message in
+            let original = store.original(message)
+            if let mail = ReportText.mailURL(to: BuildSettings.supportEmail, for: original, appVersion: BuildSettings.appVersion) {
+                Button("\(blockWord(message)) and email a report", role: .destructive) {
+                    store.report(original)
+                    openURL(mail) // Mail sends it once there's signal
+                }
+                .accessibilityIdentifier("report-and-email")
+            }
+            Button(blockWord(message), role: .destructive) { store.report(original) }
+                .accessibilityIdentifier("report-block")
+        } message: { message in
+            Text(reportExplanation(message))
+        }
         // Any sheet closes the keyboard. iOS 27 left it up over sheets opened from the
         // menu, covering half of Settings.
         .onChange(of: sheet) { _, opened in if opened != nil { composerFocused = false } }
@@ -75,6 +101,28 @@ struct ChatScreen: View {
         #else
         false
         #endif
+    }
+
+    private var reportTitle: String {
+        guard let reporting else { return "Report" }
+        return "Report \(reporting.senderName)'s message?"
+    }
+
+    private func canBlock(_ message: ChatMessage) -> Bool {
+        message.senderKey.count == 64 && message.senderKey.allSatisfy(\.isHexDigit)
+    }
+
+    private func blockWord(_ message: ChatMessage) -> String {
+        canBlock(message) ? "Block \(message.senderName)" : "Hide message"
+    }
+
+    private func reportExplanation(_ message: ChatMessage) -> String {
+        let action = canBlock(message)
+            ? "You won't see anything \(message.senderName) sends. They aren't told."
+            : "Letterbox couldn't confirm who sent this, so only this message is hidden."
+        return BuildSettings.supportEmail == nil
+            ? action
+            : action + " An emailed report goes to the Letterbox team, and is sent once you have signal."
     }
 
     @ToolbarContentBuilder

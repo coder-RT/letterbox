@@ -20,6 +20,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LetterboxLocationChannels</key>
+	<string>$(LETTERBOX_LOCATION_CHANNELS)</string>
+	<key>LetterboxSupportEmail</key>
+	<string>$(LETTERBOX_SUPPORT_EMAIL)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Letterbox uses Bluetooth to chat with people nearby, with no internet and no accounts. Messages hop between phones running Letterbox.</string>
 	<key>NSCameraUsageDescription</key>

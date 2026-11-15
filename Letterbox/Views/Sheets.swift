@@ -17,48 +17,52 @@ struct ChannelsSheet: View {
                     SectionHeader("Nearby, no internet")
                 }
 
-                Section {
-                    if let location = store.location {
-                        row(.location(geohash: location.geohash),
-                            subtitle: "\(location.level.title) · \(store.relays.connected)/\(store.relays.total) relays",
-                            icon: "mappin.and.ellipse")
-                        Button("Leave location channel", role: .destructive) {
-                            Task { await store.leaveLocation() }
-                        }
-                    }
-                    ForEach(GeohashLevel.allCases.reversed(), id: \.self) { level in
-                        Button {
-                            joining = level
-                            Task {
-                                await store.joinLocation(level)
-                                joining = nil
-                                if store.locationError == nil { dismiss() }
-                            }
-                        } label: {
-                            HStack {
-                                RowLabel("Join \(level.title.lowercased()) channel", systemImage: "location")
-                                Spacer()
-                                if joining == level { ProgressView().controlSize(.small) }
+                // Left out of the App Store build (see BuildSettings).
+                if store.offersLocationChannels {
+                    Section {
+                        if let location = store.location {
+                            row(.location(geohash: location.geohash),
+                                subtitle: "\(location.level.title) · \(store.relays.connected)/\(store.relays.total) relays",
+                                icon: "mappin.and.ellipse")
+                            Button("Leave location channel", role: .destructive) {
+                                Task { await store.leaveLocation() }
                             }
                         }
-                        .disabled(joining != nil)
+                        ForEach(GeohashLevel.allCases.reversed(), id: \.self) { level in
+                            Button {
+                                joining = level
+                                Task {
+                                    await store.joinLocation(level)
+                                    joining = nil
+                                    if store.locationError == nil { dismiss() }
+                                }
+                            } label: {
+                                HStack {
+                                    RowLabel("Join \(level.title.lowercased()) channel", systemImage: "location")
+                                    Spacer()
+                                    if joining == level { ProgressView().controlSize(.small) }
+                                }
+                            }
+                            .disabled(joining != nil)
+                        }
+                        if let error = store.locationError {
+                            Text(error).font(.footnote).foregroundStyle(Theme.bad)
+                        }
+                    } header: {
+                        SectionHeader("Location, over the internet")
                     }
-                    if let error = store.locationError {
-                        Text(error).font(.footnote).foregroundStyle(Theme.bad)
-                    }
-                } header: {
-                    SectionHeader("Location, over the internet")
-                }
-                .disabled(!store.permissions.internet)
+                    .disabled(!store.permissions.internet)
 
-                // An explanation row rather than a footer: footers stop growing at the
-                // largest text sizes, rows don't.
-                Section {
-                    Text(store.permissions.internet
-                         ? "Location channels go through public Nostr relays, which can see your IP address. Each area uses a separate identity."
-                         : "The internet is off in Letterbox. Turn it on in Connections to use location channels.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.primary)
+                    // An explanation row rather than a footer: footers stop growing at the
+                    // largest text sizes, rows don't.
+                    Section {
+                        RowLabel(store.permissions.internet
+                                 ? "Location channels go through public Nostr relays, which can see your IP address. Each area uses a separate identity."
+                                 : "The internet is off in Letterbox. Turn it on in Connections to use location channels.",
+                                 systemImage: "info.circle")
+                            .font(.footnote)
+                            .foregroundStyle(Color.primary)
+                    }
                 }
 
                 if !store.directChannels.isEmpty {
@@ -231,6 +235,10 @@ struct SettingsSheet: View {
                     NavigationLink { MyCodeView() } label: {
                         RowLabel("Your safety code", systemImage: "qrcode")
                     }
+                    NavigationLink { HelpView() } label: {
+                        RowLabel("Help and safety", systemImage: "lifepreserver")
+                    }
+                    .accessibilityIdentifier("help-and-safety")
                 } footer: {
                     SectionFooter("Friends scan this in person to know messages really come from you. Anyone can copy a nickname, but not a code.")
                 }

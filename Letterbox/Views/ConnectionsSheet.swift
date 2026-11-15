@@ -16,14 +16,18 @@ struct ConnectionsSheet: View {
                         RowLabel("Use Bluetooth", systemImage: "antenna.radiowaves.left.and.right")
                     }
                     .accessibilityIdentifier("toggle-bluetooth")
-                    Toggle(isOn: binding(\.internet, set: store.setInternetAllowed)) {
-                        RowLabel("Use the internet", systemImage: "globe")
+                    if store.offersLocationChannels {
+                        Toggle(isOn: binding(\.internet, set: store.setInternetAllowed)) {
+                            RowLabel("Use the internet", systemImage: "globe")
+                        }
+                        .accessibilityIdentifier("toggle-internet")
                     }
-                    .accessibilityIdentifier("toggle-internet")
                 } header: {
                     SectionHeader("Letterbox may use")
                 } footer: {
-                    SectionFooter("Letterbox picks the best allowed way for each message. With the internet off, relays never see your IP address.")
+                    SectionFooter(store.offersLocationChannels
+                        ? "Letterbox picks the best allowed way for each message. With the internet off, relays never see your IP address."
+                        : "Letterbox works over Bluetooth only. It never uses the internet.")
                 }
 
                 Section(header: SectionHeader("Right now")) {

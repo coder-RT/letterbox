@@ -15,6 +15,15 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Support address for reports and the Help screen, from Makefile.local (never in git).
+    LETTERBOX_SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+  configs:
+    # Location channels (chat over the internet) are left out of Release, the App Store
+    # build: Letterbox is for when there's no internet, and it keeps App Review scope small.
+    Debug:
+      LETTERBOX_LOCATION_CHANNELS: "YES"
+    Release:
+      LETTERBOX_LOCATION_CHANNELS: "NO"
 packages:
   LetterboxKit:
     path: Packages/LetterboxKit
@@ -62,6 +71,8 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [bluetooth-central, bluetooth-peripheral]
+        LetterboxLocationChannels: $(LETTERBOX_LOCATION_CHANNELS)
+        LetterboxSupportEmail: $(LETTERBOX_SUPPORT_EMAIL)
         NSBluetoothAlwaysUsageDescription: "Letterbox uses Bluetooth to chat with people nearby, with no internet and no accounts. Messages hop between phones running Letterbox."
         NSLocationWhenInUseUsageDescription: "Letterbox uses your approximate location only when you join a location channel, to pick the area's chat room. Your exact position is never sent."
         NSCameraUsageDescription: "Letterbox uses the camera only to scan a friend's code in person, to check their identity. Nothing is recorded or sent."
@@ -91,6 +102,8 @@ targets:
       properties:
         CFBundleDisplayName: Letterbox
         LSApplicationCategoryType: public.app-category.social-networking
+        LetterboxLocationChannels: $(LETTERBOX_LOCATION_CHANNELS)
+        LetterboxSupportEmail: $(LETTERBOX_SUPPORT_EMAIL)
         NSBluetoothAlwaysUsageDescription: "Letterbox uses Bluetooth to chat with people nearby, with no internet and no accounts."
         NSLocationUsageDescription: "Letterbox uses your approximate location only when you join a location channel."
         NSLocationWhenInUseUsageDescription: "Letterbox uses your approximate location only when you join a location channel."

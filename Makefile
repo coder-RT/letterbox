@@ -5,9 +5,11 @@ DERIVED := build/DerivedData
 # Personal settings live in Makefile.local (not in git):
 #   DEVICE := <your iPhone's identifier, from `xcrun devicectl list devices`>
 #   DEVELOPMENT_TEAM := <your Apple developer team ID>
+#   SUPPORT_EMAIL := <support address on the publisher's domain, for reports and Help>
 -include Makefile.local
 DEVICE ?=
 export DEVELOPMENT_TEAM
+export SUPPORT_EMAIL
 BUNDLE_ID := app.letterbox
 
 help: ## List commands

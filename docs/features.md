@@ -31,6 +31,8 @@ Each feature is scored 1–5 on three things:
 | Lock-screen alerts for #nearby and private messages | Shipped | 5 | 4 | 5 | 4.7 | Local only; names and text hidden unless you choose, and always with the privacy screen on |
 | Running in the background, relaunched by iOS for Bluetooth (state restoration) | Shipped, needs field test | 5 | 4 | 1 | 3.3 | iOS slows Bluetooth in the background; can't be automated |
 | Block a person | Shipped | 3 | 4 | 5 | 4.0 | Hides their messages everywhere; your phone still relays them for others |
+| Report a message (blocks the sender; optional email report) | Shipped | 3 | 4 | 5 | 4.0 | App Review guideline 1.2; email goes to the publisher's support address when set |
+| Offensive-word filter, on by default | Shipped | 3 | 4 | 5 | 4.0 | On the phone only; Settings → Help and safety |
 | Conversation history | Memory only, by design | 3 | 2 | 4 | 3.0 | Only your undelivered messages are saved; catching up refills #nearby after a restart |
 
 ## Routing and connectivity
@@ -48,7 +50,7 @@ Each feature is scored 1–5 on three things:
 
 | Feature | Status | Value | Done | Tests | Overall | Notes |
 |---|---|---|---|---|---|---|
-| Location channels over Nostr relays | Shipped | 2 | 4 | 4 | 3.3 | Needs internet; relays see your IP |
+| Location channels over Nostr relays | Debug builds only | 2 | 4 | 4 | 3.3 | Needs internet; relays see your IP. Left out of the App Store build |
 | Private messages over the internet | Phase 2 | 4 | – | – | – | Sealed, through Nostr relays |
 | Photos over the internet | Phase 2 | 3 | – | – | – | Shrunk to about 50 KB, EXIF and GPS removed |
 | Videos | Later | 2 | – | – | – | |

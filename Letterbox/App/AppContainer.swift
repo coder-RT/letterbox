@@ -59,7 +59,8 @@ final class AppContainer {
             // Who you've verified stays encrypted on disk.
             appState: EncryptedFileStore(fileURL: Self.stateURL("app-state.bin"), secrets: secrets, keyName: SecretKey.appState),
             notifier: SystemMessageNotifier(),
-            eraser: DeviceDataEraser(secrets: secrets, directory: Self.stateDirectory)
+            eraser: DeviceDataEraser(secrets: secrets, directory: Self.stateDirectory),
+            offersLocationChannels: BuildSettings.offersLocationChannels
         )
     }
 

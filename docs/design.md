@@ -50,6 +50,9 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | Alerts setting | `bell.badge` | The system's notification symbol |
 | Erase everything | `trash` | Deleting, shown in red with a confirmation |
 | Block, unblock | `nosign` | "Not allowed"; `hand.raised` already means the privacy screen |
+| Report | `exclamationmark.bubble` | A problem with a message |
+| Help and safety | `lifepreserver` | Help; distinct from the privacy and block symbols |
+| Hide offensive words | `eye.slash` | Hidden from view |
 
 ### Licensing
 

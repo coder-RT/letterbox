@@ -17,6 +17,8 @@ struct MessageList: View {
     var emptyState = AnyView(EmptyView())
     /// Sends one of our undelivered messages again.
     var sendAgain: ((ChatMessage) -> Void)?
+    /// Reports someone else's message.
+    var report: ((ChatMessage) -> Void)?
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -27,7 +29,8 @@ struct MessageList: View {
                     }
                     ForEach(messages) { message in
                         MessageRow(message: message, hidesText: hidesText, carriers: envelopes.carriers(for: message.id),
-                                   sendAgain: sendAgain.map { action in { action(message) } })
+                                   sendAgain: sendAgain.map { action in { action(message) } },
+                                   report: report.map { action in { action(message) } })
                             .id(message.id)
                     }
                 }
@@ -51,6 +54,7 @@ struct MessageRow: View {
     var hidesText = false
     var carriers: Int?
     var sendAgain: (() -> Void)?
+    var report: (() -> Void)?
     /// A blurred message the user tapped to peek at. Hides itself again after a few seconds.
     @State private var revealed = false
 
@@ -158,6 +162,12 @@ struct MessageRow: View {
                     Label("Send via AirDrop…", systemImage: "square.and.arrow.up")
                 }
             }
+        }
+        if !message.isOwn, message.senderKey != "system", let report {
+            Button(role: .destructive, action: report) {
+                Label("Report…", systemImage: "exclamationmark.bubble")
+            }
+            .accessibilityIdentifier("report-message")
         }
     }
 

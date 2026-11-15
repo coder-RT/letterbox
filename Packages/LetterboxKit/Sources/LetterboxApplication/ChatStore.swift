@@ -36,6 +36,11 @@ public final class ChatStore {
     public private(set) var showsTextInNotifications: Bool
     /// Everything was erased; the app does nothing more until it's reopened.
     public private(set) var isErased = false
+    /// Offensive words in other people's messages are masked on this phone. On by default.
+    public private(set) var filtersOffensiveWords: Bool
+    /// Location channels (public chat over the internet) are part of this build. The App
+    /// Store build leaves them out: Letterbox is for when there's no internet.
+    public let offersLocationChannels: Bool
 
     public private(set) var unread: [ChannelID: Int] = [:]
     private var timelines: [ChannelID: [ChatMessage]] = [:]
@@ -65,6 +70,7 @@ public final class ChatStore {
     static let bluetoothKey = "transport.bluetooth"
     static let internetKey = "transport.internet"
     static let notificationTextKey = "notifications.showText"
+    static let filterKey = "safety.filterWords"
 
     public init(
         mesh: any MeshTransport,
@@ -74,7 +80,8 @@ public final class ChatStore {
         connectivity: (any ConnectivityMonitor)? = nil,
         appState: (any BlobStore)? = nil,
         notifier: (any MessageNotifier)? = nil,
-        eraser: (any LocalDataEraser)? = nil
+        eraser: (any LocalDataEraser)? = nil,
+        offersLocationChannels: Bool = true
     ) {
         self.mesh = mesh
         self.locationChannels = locationChannels
@@ -84,11 +91,13 @@ public final class ChatStore {
         self.appState = appState
         self.notifier = notifier
         self.eraser = eraser
+        self.offersLocationChannels = offersLocationChannels
         myFingerprint = mesh.myFingerprint
         let saved = settings.string(for: Self.nicknameKey).map(Nickname.sanitize) ?? ""
         nickname = saved.isEmpty ? Nickname.random() : saved
         hidesMessages = settings.string(for: Self.hideMessagesKey) == "1"
         showsTextInNotifications = settings.string(for: Self.notificationTextKey) == "1"
+        filtersOffensiveWords = settings.string(for: Self.filterKey) != "0"
         permissions = TransportPermissions(
             bluetooth: settings.string(for: Self.bluetoothKey) != "0",
             internet: settings.string(for: Self.internetKey) != "0"
@@ -143,8 +152,10 @@ public final class ChatStore {
 
     // MARK: - Reading state
 
+    /// The conversation as shown: other people's offensive words masked if the filter is on.
     public func messages(in channel: ChannelID) -> [ChatMessage] {
-        timelines[channel] ?? []
+        let timeline = timelines[channel] ?? []
+        return filtersOffensiveWords ? timeline.map(displayed) : timeline
     }
 
     public func peer(for fingerprint: Fingerprint) -> Peer? {
@@ -245,7 +256,8 @@ public final class ChatStore {
             nearby: peers.count,
             relays: relays,
             inLocationChannel: location != nil,
-            envelopes: envelopes
+            envelopes: envelopes,
+            offersLocationChannels: offersLocationChannels
         )
     }
 
@@ -328,6 +340,43 @@ public final class ChatStore {
         return blocked.keys.contains { $0.hex == message.senderKey }
     }
 
+    /// Reports a message: its sender is blocked straight away (or, if they couldn't be
+    /// identified, the message is hidden). Sending the report by email is up to the UI,
+    /// with `ReportText`.
+    public func report(_ message: ChatMessage) {
+        guard !message.isOwn, message.senderKey != "system" else { return }
+        if Self.isFingerprint(message.senderKey) {
+            block(Fingerprint(hex: message.senderKey), nickname: message.senderName)
+        } else {
+            timelines[message.channel]?.removeAll { $0.id == message.id }
+        }
+    }
+
+    public func setFiltersOffensiveWords(_ on: Bool) {
+        filtersOffensiveWords = on
+        settings.set(on ? "1" : "0", for: Self.filterKey)
+    }
+
+    /// Other people's words, with offensive ones masked if the filter is on.
+    public func displayed(_ message: ChatMessage) -> ChatMessage {
+        guard filtersOffensiveWords, !message.isOwn, message.senderKey != "system" else { return message }
+        let text = ContentFilter.mask(message.text)
+        let name = ContentFilter.mask(message.senderName)
+        guard text != message.text || name != message.senderName else { return message }
+        return ChatMessage(id: message.id, channel: message.channel, senderName: name, senderKey: message.senderKey,
+                           text: text, timestamp: message.timestamp, isOwn: message.isOwn,
+                           isVerified: message.isVerified, delivery: message.delivery)
+    }
+
+    /// The message as it was received, unmasked: what a report should contain.
+    public func original(_ message: ChatMessage) -> ChatMessage {
+        timelines[message.channel]?.first { $0.id == message.id } ?? message
+    }
+
+    static func isFingerprint(_ key: String) -> Bool {
+        key.count == 64 && key.allSatisfy(\.isHexDigit)
+    }
+
     // MARK: - Erasing
 
     /// Deletes everything Letterbox keeps on this device and stops it. Bluetooth goes
@@ -386,6 +435,7 @@ public final class ChatStore {
     }
 
     public func joinLocation(_ level: GeohashLevel) async {
+        guard offersLocationChannels else { return }
         guard permissions.internet else {
             locationError = "The internet is off in Letterbox. Turn it on in Connections to join location channels."
             return

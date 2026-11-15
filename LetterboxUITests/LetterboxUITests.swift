@@ -11,10 +11,12 @@ final class LetterboxUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func launch(scenario: String = "nearby", connectivity: String = "wifi", extra: [String] = []) -> XCUIApplication {
+    private func launch(scenario: String = "nearby", connectivity: String = "wifi", extra: [String] = [],
+                        environment: [String: String] = [:]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"] + extra
         app.launchEnvironment = ["UITEST_SCENARIO": scenario, "UITEST_CONNECTIVITY": connectivity]
+            .merging(environment) { _, new in new }
         app.launch()
         return app
     }
@@ -176,6 +178,46 @@ final class LetterboxUITests: XCTestCase {
         send("anyone?", in: app)
         Thread.sleep(forTimeInterval: 3) // Sam answers, but we don't see it
         XCTAssertFalse(element(containing: "Sam heard you", in: app).exists)
+    }
+
+    /// Guideline 1.2: anyone's message can be reported, which blocks them at once.
+    func testReportingSomeoneBlocksThem() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        send("hello", in: app)
+        let reply = app.staticTexts["Sam heard you"].firstMatch
+        XCTAssertTrue(reply.waitForExistence(timeout: 10))
+        reply.press(forDuration: 1.0)
+        let report = app.buttons["Report…"].firstMatch
+        XCTAssertTrue(report.waitForExistence(timeout: 5))
+        // A tap while the menu is still opening is swallowed (seen in the recording of a
+        // failed run), so let it settle and tap again if the menu is still there.
+        let byID = app.buttons["report-block"].firstMatch
+        for _ in 0..<3 where !byID.exists {
+            Thread.sleep(forTimeInterval: 0.6)
+            if report.exists { report.tap() }
+            _ = byID.waitForExistence(timeout: 3)
+        }
+        let block = byID.exists ? byID : app.buttons["Block Sam"].firstMatch
+        XCTAssertTrue(block.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["report-and-email"].exists, "No support address in test builds, so no email option")
+        block.tap()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: reply)
+        wait(for: [gone], timeout: 5)
+    }
+
+    /// The App Store build leaves out location channels: nothing about them is offered.
+    func testStoreBuildLeavesOutLocationChannels() {
+        let app = launch(environment: ["UITEST_LOCATION_CHANNELS": "off"])
+        waitForPeople(app, count: 1)
+        app.buttons["channel-button"].tap()
+        XCTAssertTrue(element(containing: "in Bluetooth range", in: app).waitForExistence(timeout: 5))
+        XCTAssertFalse(element(containing: "Join city channel", in: app).exists)
+        done(app)
+        app.buttons["connections-button"].tap()
+        XCTAssertTrue(element(containing: "never uses the internet", in: app).waitForExistence(timeout: 5))
+        XCTAssertFalse(app.switches["toggle-internet"].exists)
+        XCTAssertFalse(element(containing: "Relays", in: app).exists)
     }
 
     func testEraseEverythingAsksFirstThenStops() {
@@ -356,6 +398,15 @@ final class LetterboxUITests: XCTestCase {
         // Settings is longer than the screen: check the bottom too (How it works, Erase).
         for _ in 0..<4 { app.swipeUp() }
         try audit(app, "Settings, scrolled to the end", scrolled: true, into: &problems)
+        done(app)
+
+        openMore(app, item: "Settings")
+        let help = app.buttons["help-and-safety"].firstMatch
+        XCTAssertTrue(help.waitForExistence(timeout: 5))
+        help.tap()
+        XCTAssertTrue(app.switches["filter-toggle"].waitForExistence(timeout: 5))
+        try audit(app, "Help and safety", into: &problems)
+        app.navigationBars["Help and safety"].buttons.firstMatch.tap()
         done(app)
 
         openMore(app, item: "Send outside Letterbox")

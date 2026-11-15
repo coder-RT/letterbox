@@ -18,6 +18,7 @@ Letterbox runs its **own network**. It uses its own Bluetooth service ID, its ow
 - [Security assessment](docs/security-assessment.md): threat model, findings with severity and evidence, the OWASP DSOVS maturity scorecard, and how to re-run the checks (`make security`).
 - [Design and accessibility](docs/design.md): screen-by-screen changes, icons and their licences, colours with contrast ratios, the accessibility checklist.
 - [Domain map](docs/domain.md): the bounded contexts, a glossary of terms, and which port and adapter each concept lives in.
+- [Publishing on the App Store](docs/app-store-release.md): what App Review needs, what's built, and the steps for the company publishing it.
 - [Gap analysis](docs/gap-analysis.md): Letterbox compared with bitchat's design docs. What was added, what was already covered, what's deliberately left out and why, and the release checklist.
 
 ## Running it
@@ -29,6 +30,7 @@ For the iPhone, also create a `Makefile.local` (it's ignored by git) with your o
 ```make
 DEVICE := <your iPhone's identifier, from: xcrun devicectl list devices>
 DEVELOPMENT_TEAM := <your Apple developer team ID, from Xcode → Settings → Accounts>
+SUPPORT_EMAIL := <optional: where reports and questions go; see docs/app-store-release.md>
 ```
 
 ```bash
@@ -112,7 +114,7 @@ Types: `announce` 0x01, `publicMessage` 0x02, `leave` 0x03, `handshake` 0x10, `e
 
 ## Tests
 
-`make test` runs 355 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 18 iPhone UI tests in the simulator:
+`make test` runs 364 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 20 iPhone UI tests in the simulator:
 - **Domain:** geohash encoding at every level and the map's edges, nickname cleaning, identifiers and hex parsing
 - **Wire format:** golden vectors published in [docs/wire-test-vectors.json](docs/wire-test-vectors.json), every packet type, the exact byte layout, forward-compatible TLV fields, payload limits, BLE chunking across MTUs, and fuzzing with random bytes and every single-bit flip
 - **Crypto:** the Noise implementation byte for byte against the published conformance vectors, handshake turn-taking and tampering, nonce encoding, the replay window, and signatures
@@ -122,7 +124,7 @@ Types: `announce` 0x01, `publicMessage` 0x02, `leave` 0x03, `handshake` 0x10, `e
 - **ChatStore:** commands, channels, unread counts, delivery states, location channels, nickname handling, privacy mode, the Bluetooth and internet switches, envelope summaries, lock-screen alerts (hidden by default), blocking and erasing
 - **Routing and connectivity:** every combination in the route planner, every status in the connections panel, and the device readings mapping
 - **Store and engine together:** the real `ChatStore` on the real mesh engine with simulated phones: private messages with receipts, Bluetooth off then on (both ways), envelope summaries from hand-off to receipt, verification and impostor detection
-- **UI tests (simulator):** nearby chat, private messages with ticks, verifying someone, the privacy screen, the Connections panel with Bluetooth off then on, an offline device with the internet switch, an envelope carried by a passing hiker, catching up on #nearby after arriving, the empty #nearby screen when you're alone, blocking someone, erasing everything, Apple's accessibility audit on every screen, and screenshots in light, dark and the largest text size
+- **UI tests (simulator):** nearby chat, private messages with ticks, verifying someone, the privacy screen, the Connections panel with Bluetooth off then on, an offline device with the internet switch, an envelope carried by a passing hiker, catching up on #nearby after arriving, the empty #nearby screen when you're alone, blocking and reporting someone, the App Store build without location channels, erasing everything, Apple's accessibility audit on every screen, and screenshots in light, dark and the largest text size
 
 ## Privacy notes and known limits
 

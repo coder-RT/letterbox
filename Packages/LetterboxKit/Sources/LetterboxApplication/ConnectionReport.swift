@@ -11,15 +11,18 @@ public enum ConnectionReport {
         nearby: Int,
         relays: (connected: Int, total: Int),
         inLocationChannel: Bool,
-        envelopes: EnvelopeSummary
+        envelopes: EnvelopeSummary,
+        offersLocationChannels: Bool = true
     ) -> [ConnectionRow] {
-        [
+        let rows = [
             ConnectionRow(kind: .bluetooth, title: "Bluetooth",
                           status: bluetooth(radio, allowed: permissions.bluetooth, nearby: nearby),
                           enables: "Chat with people nearby, with no signal or internet"),
             ConnectionRow(kind: .internet, title: "Internet",
-                          status: internet(system.internet, allowed: permissions.internet),
-                          enables: "Location channels"),
+                          status: offersLocationChannels
+                              ? internet(system.internet, allowed: permissions.internet)
+                              : internet(system.internet, allowed: true),
+                          enables: offersLocationChannels ? "Location channels" : "Nothing in Letterbox: it works without internet"),
             ConnectionRow(kind: .wifi, title: "Wi-Fi",
                           status: wifi(system.internet),
                           enables: "Internet without using mobile data"),
@@ -39,6 +42,8 @@ public enum ConnectionReport {
                           status: envelopeStatus(envelopes, bluetoothAllowed: permissions.bluetooth),
                           enables: "Messages carried by other hikers to people out of range"),
         ]
+        // Without location channels, Letterbox never uses location or relays.
+        return offersLocationChannels ? rows : rows.filter { $0.kind != .location && $0.kind != .relays }
     }
 
     static func bluetooth(_ radio: RadioState, allowed: Bool, nearby: Int) -> ConnectionStatus {
