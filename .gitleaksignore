@@ -1,5 +1,7 @@
 # gitleaks false positives, reviewed 2026-11-15 (see docs/security-assessment.md, CODE-002).
-# Swift type declarations like `noiseKey: Curve25519.KeyAgreement.PrivateKey` match the generic-api-key rule; no secret values.
+# Swift properties whose type is a CryptoKit private-key type match the generic-api-key rule; no secret values.
+# The commit below added an earlier wording of this comment, which itself matched the rule (history scan).
+c476cbcb8423bca5ebc1c417d750ff78cbbb7df0:.gitleaksignore:generic-api-key:2
 Packages/LetterboxKit/Sources/LetterboxCrypto/IdentityKeys.swift:generic-api-key:28
 Packages/LetterboxKit/Sources/LetterboxCrypto/IdentityKeys.swift:generic-api-key:32
 Packages/LetterboxKit/Sources/LetterboxCrypto/NoiseXSeal.swift:generic-api-key:34

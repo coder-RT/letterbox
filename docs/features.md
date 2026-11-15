@@ -1,6 +1,6 @@
 # Letterbox features, scored
 
-Last scored: 2026-11-14, after the rename to Letterbox, the accessibility pass, verification and UI tests.
+Last scored: 2026-11-15, after the gap analysis against the reference docs (see [gap-analysis.md](gap-analysis.md)): catching up on #nearby, lock-screen alerts, background relaunch, blocking and erasing.
 
 Each feature is scored 1–5 on three things:
 
@@ -22,13 +22,16 @@ Each feature is scored 1–5 on three things:
 | Envelopes: messages carried by other hikers | Shipped | 5 | 4 | 5 | 4.7 | Needs a field test with 3 phones |
 | Envelopes screen and envelope icon with carrier count | Shipped | 4 | 4 | 5 | 4.3 | Unit, integration and UI tests (simulated courier) |
 | Signatures, forgery and replay protection | Shipped | 4 | 5 | 5 | 4.7 | Found and fixed a nonce-0 replay bug |
+| Catching up on #nearby: missed public messages (last 12 hours) from the first neighbour you meet | Shipped | 5 | 4 | 5 | 4.7 | Also carries messages between groups that never meet; signature checked; only answers to your own request |
 | Emoji over Bluetooth | Shipped | 3 | 5 | 4 | 4.0 | Text is UTF-8; no internet needed |
 | Send outside Letterbox (AirDrop or other apps, one-way) | Shipped | 4 | 4 | 4 | 4.0 | Offline to nearby Apple devices; they tap Accept and can't reply unless they install Letterbox |
 | Invite someone (share a note with how to get Letterbox) | Shipped | 4 | 5 | 4 | 4.3 | In "Send outside Letterbox" and on the empty Nearby list |
 | Nickname and commands (`/msg`, `/who`, `/nick`, `/clear`, `/help`) | Shipped | 3 | 5 | 5 | 4.3 | |
 | Verification: safety number, QR scan, Verified badge, impostor warning | Shipped | 4 | 4 | 4 | 4.0 | QR scan needs a real camera to test |
-| Running in the background | Partial | 5 | 2 | 1 | 2.7 | iOS slows Bluetooth in the background; state restoration planned |
-| Conversation history | Memory only, by design | 3 | 1 | – | 2.0 | Only your undelivered messages are saved |
+| Lock-screen alerts for #nearby and private messages | Shipped | 5 | 4 | 5 | 4.7 | Local only; names and text hidden unless you choose, and always with the privacy screen on |
+| Running in the background, relaunched by iOS for Bluetooth (state restoration) | Shipped, needs field test | 5 | 4 | 1 | 3.3 | iOS slows Bluetooth in the background; can't be automated |
+| Block a person | Shipped | 3 | 4 | 5 | 4.0 | Hides their messages everywhere; your phone still relays them for others |
+| Conversation history | Memory only, by design | 3 | 2 | 4 | 3.0 | Only your undelivered messages are saved; catching up refills #nearby after a restart |
 
 ## Routing and connectivity
 
@@ -60,7 +63,9 @@ Each feature is scored 1–5 on three things:
 | iPhone app | Shipped | 5 | 4 | – | 4.5 | |
 | Mac app | Shipped | 2 | 4 | – | 3.0 | No mobile network or app-switcher cover |
 | iPad layout | Planned | 1 | – | – | – | |
-| Emergency wipe | Planned | 3 | – | – | – | `KeychainSecretStore.deleteAll` and `BlobStore.delete` are ready |
+| Erase everything (Settings, with a confirmation) | Shipped | 3 | 5 | 5 | 4.3 | Keys, state files, settings and alerts; a reinstall also clears keys left in the Keychain |
+| Privacy manifest (`PrivacyInfo.xcprivacy`) | Shipped | 2 | 5 | – | 3.5 | Needed for App Store submission |
+| Wire-format golden vectors (`docs/wire-test-vectors.json`) | Shipped | 2 | 5 | 5 | 4.0 | For other implementations; a test fails if the format drifts |
 
 ## Field tests still needed
 
@@ -71,3 +76,6 @@ These are covered by automated tests on a simulated radio, but not yet tried on 
 3. **Bluetooth toggle** off and on: the other phone should drop you, then see you again.
 4. **Background delivery:** how long a message takes to arrive with Letterbox in the background.
 5. **Range** between two phones in open terrain, in forest and through rock.
+6. **State restoration:** with Letterbox in the background, simulate iOS closing it (see the release checklist in [gap-analysis.md](gap-analysis.md)), then bring a second phone into range: Letterbox should relaunch and the message should arrive.
+7. **Lock-screen alert** with the phone locked: shows "New private message" only, and the name and text once you turn that on.
+8. **Catching up across groups:** A and B talk, B walks to C, and C sees what A said.

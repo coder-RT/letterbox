@@ -61,6 +61,23 @@ public actor MeshNode: MeshTransport {
         public var maxPendingReceiptsPerPerson = 2
         /// Message IDs carried in one merged receipt.
         public var maxIDsPerReceipt = 50
+        /// Envelopes accepted for carrying per Bluetooth link per minute (burst of the same size).
+        public var envelopesPerLinkPerMinute: Double = 30
+        /// Share of the carried envelopes one depositor (link) can fill.
+        public var maxCarriedPerDepositor = 32
+
+        // Catching up on #nearby (messages sent while you were out of range or off).
+        /// How far back missed #nearby messages are offered and accepted. Long enough
+        /// for a day out of range; the messages are kept in memory only.
+        public var publicHistoryWindow: TimeInterval = 12 * 60 * 60
+        /// #nearby messages kept to pass on to phones that missed them.
+        public var maxArchivedPublicMessages = 300
+        /// Most messages sent in answer to one catch-up request.
+        public var maxSyncMessages = 100
+        /// Answers to our catch-up request are accepted for this long.
+        public var syncResponseWindow: TimeInterval = 30
+        /// Ask, or answer, the same link at most this often.
+        public var syncInterval: TimeInterval = 60
 
         public init() {}
     }
@@ -105,11 +122,17 @@ public actor MeshNode: MeshTransport {
     private var publicLimiter: RateLimiter<PeerID>
     private var unverifiedLimiter: RateLimiter<LinkID>
     private var directedRelayLimiter: RateLimiter<PeerID>
+    private var depositLimiter: RateLimiter<LinkID>
 
     // Store and forward.
     private var contacts: [Fingerprint: Contact] = [:]
     private var carried: CarriedEnvelopes
     private var openedEnvelopes = RecentIDs()
+    // Catching up on #nearby.
+    private var archive: PublicArchive
+    private var pendingSyncs: [LinkID: PendingSync] = [:]
+    private var lastSyncRequest: [LinkID: Date] = [:]
+    private var lastSyncServed: [LinkID: Date] = [:]
     // Persistence.
     private let store: (any BlobStore)?
     private var dirty = false
@@ -133,6 +156,7 @@ public actor MeshNode: MeshTransport {
         self.now = now
         myFingerprint = identity.fingerprint
         carried = CarriedEnvelopes(capacity: configuration.maxCarriedEnvelopes, maxLifetime: configuration.maxCarryTime)
+        archive = PublicArchive(capacity: configuration.maxArchivedPublicMessages)
         newPeerLimiter = RateLimiter(capacity: configuration.newPeersPerLinkPerMinute, perMinute: configuration.newPeersPerLinkPerMinute)
         publicLimiter = RateLimiter(capacity: configuration.publicMessagesPerSenderPerMinute,
                                     perMinute: configuration.publicMessagesPerSenderPerMinute)
@@ -140,6 +164,8 @@ public actor MeshNode: MeshTransport {
                                         perMinute: configuration.unverifiedMessagesPerLinkPerMinute)
         directedRelayLimiter = RateLimiter(capacity: configuration.relayedDirectedPerSenderPerMinute,
                                            perMinute: configuration.relayedDirectedPerSenderPerMinute)
+        depositLimiter = RateLimiter(capacity: configuration.envelopesPerLinkPerMinute,
+                                     perMinute: configuration.envelopesPerLinkPerMinute)
         (events, continuation) = AsyncStream.makeStream(of: MeshEvent.self, bufferingPolicy: .bufferingNewest(512))
 
         if let data = store?.load(), let snapshot = try? JSONDecoder().decode(MeshSnapshot.self, from: data),
@@ -220,7 +246,10 @@ public actor MeshNode: MeshTransport {
     public func sendPublic(_ text: String) -> ChatMessage {
         let payload = PublicMessagePayload(nickname: nickname, text: text)
         let packet = makePacket(.publicMessage, payload: payload.encoded(), sign: true)
-        if let packet { transmit(packet) }
+        if let packet {
+            transmit(packet)
+            if let announce = makeAnnounce() { archive.insert(.init(message: packet, announce: announce)) }
+        }
         return ChatMessage(
             id: packet?.packetID.hexString ?? UUID().uuidString,
             channel: .mesh,
@@ -280,6 +309,9 @@ public actor MeshNode: MeshTransport {
             for key in peers.keys {
                 peers[key]?.directLinks.remove(linkID)
             }
+            pendingSyncs[linkID] = nil
+            lastSyncRequest[linkID] = nil
+            lastSyncServed[linkID] = nil
             publishPeers()
         case let .frame(data, linkID):
             receive(data, from: linkID)
@@ -306,7 +338,13 @@ public actor MeshNode: MeshTransport {
             case .leave: handleLeave(packet)
             case .handshake: handleHandshake(packet)
             case .encrypted: handleEncrypted(packet)
-            case .courier: handleCourier(packet)
+            case .courier: handleCourier(packet, from: linkID)
+            case .syncRequest:
+                relay = false
+                handleSyncRequest(packet, from: linkID)
+            case .syncResponse:
+                relay = false
+                handleSyncResponse(packet, from: linkID)
             }
         } else if !directedRelayLimiter.allow(packet.sender, now: current) {
             relay = false // SEC-03: one sender can't flood directed traffic through us
@@ -353,6 +391,7 @@ public actor MeshNode: MeshTransport {
         if isNew {
             guard newPeerLimiter.allow(linkID, now: now()), makeRoomForPeer(isDirect: isDirect) else { return false }
         }
+        let linkIsNew = isDirect && peers[packet.sender]?.directLinks.contains(linkID) != true
         if isDirect {
             // A link carries exactly one neighbour.
             for key in peers.keys where key != packet.sender {
@@ -370,8 +409,10 @@ public actor MeshNode: MeshTransport {
         )
         record.nickname = Nickname.sanitize(announce.nickname)
         record.lastSeen = now()
+        record.announce = packet
         if isDirect { record.directLinks.insert(linkID) }
         peers[packet.sender] = record
+        if linkIsNew { requestSync(on: linkID) } // catch up on #nearby from a new neighbour
 
         publishPeers()
         rememberContact(record)
@@ -424,6 +465,9 @@ public actor MeshNode: MeshTransport {
             ? publicLimiter.allow(packet.sender, now: current)
             : unverifiedLimiter.allow(linkID, now: current)
         guard allowed else { return false }
+        if verified, let announce = record?.announce {
+            archive.insert(.init(message: packet, announce: announce))
+        }
         continuation.yield(.publicMessage(ChatMessage(
             id: packet.packetID.hexString,
             channel: .mesh,
@@ -651,15 +695,17 @@ public actor MeshNode: MeshTransport {
     // MARK: - Outgoing packets
 
     private func broadcastAnnounce() {
-        guard running else { return }
+        guard running, let packet = makeAnnounce() else { return }
+        transmit(packet)
+    }
+
+    private func makeAnnounce() -> Packet? {
         let payload = AnnouncePayload(
             nickname: nickname,
             noiseKey: identity.noisePublic,
             signingKey: identity.signingPublic
         )
-        if let packet = makePacket(.announce, payload: payload.encoded(), sign: true) {
-            transmit(packet)
-        }
+        return makePacket(.announce, payload: payload.encoded(), sign: true)
     }
 
     private func makePacket(_ type: PacketType, recipient: PeerID? = nil, payload: Data, sign: Bool) -> Packet? {
@@ -719,6 +765,8 @@ public actor MeshNode: MeshTransport {
     private func maintain() {
         let current = now()
         seen.prune(now: current)
+        archive.prune(olderThan: current.addingTimeInterval(-config.publicHistoryWindow).milliseconds)
+        pendingSyncs = pendingSyncs.filter { current.timeIntervalSince($0.value.requested) <= config.syncResponseWindow }
         let carriedBefore = carried.count
         carried.prune(now: current)
         if carried.count != carriedBefore { dirty = true }
@@ -755,11 +803,92 @@ public actor MeshNode: MeshTransport {
     }
 }
 
+// MARK: - Catching up on #nearby
+
+extension MeshNode {
+    /// Asks a neighbour we just connected to for the #nearby messages we missed.
+    /// Link-local (TTL 1): it lists what we already have, so only the gaps come back.
+    private func requestSync(on linkID: LinkID) {
+        let current = now()
+        if let last = lastSyncRequest[linkID], current.timeIntervalSince(last) < config.syncInterval { return }
+        lastSyncRequest[linkID] = current
+        pendingSyncs[linkID] = PendingSync(requested: current, remaining: config.maxSyncMessages)
+        let request = SyncRequestPayload(
+            since: current.addingTimeInterval(-config.publicHistoryWindow).milliseconds,
+            have: archive.ids(limit: SyncRequestPayload.maxIDs)
+        )
+        guard var packet = makePacket(.syncRequest, payload: request.encoded(), sign: false) else { return }
+        packet.ttl = 1
+        link.send(packet.encoded(), to: linkID)
+    }
+
+    /// Sends a neighbour the archived #nearby messages it lacks, at most once per
+    /// `syncInterval` per link and `maxSyncMessages` at a time.
+    private func handleSyncRequest(_ packet: Packet, from linkID: LinkID) {
+        let current = now()
+        if let last = lastSyncServed[linkID], current.timeIntervalSince(last) < config.syncInterval { return }
+        guard let request = try? SyncRequestPayload.decode(packet.payload) else { return }
+        lastSyncServed[linkID] = current
+        let oldest = max(request.since, current.addingTimeInterval(-config.publicHistoryWindow).milliseconds)
+        for entry in archive.missing(from: Set(request.have), since: oldest, limit: config.maxSyncMessages) {
+            let payload = SyncResponsePayload(message: entry.message.encoded(), announce: entry.announce.encoded())
+            guard var reply = makePacket(.syncResponse, payload: payload.encoded(), sign: false) else { continue }
+            reply.ttl = 1
+            link.send(reply.encoded(), to: linkID)
+        }
+    }
+
+    /// A missed #nearby message from a neighbour. Accepted only in answer to our own
+    /// request on that link, and only if the author's announce and the message's
+    /// signature both check out, exactly as for a live message. Old timestamps are
+    /// allowed here (that's the point) but nothing older than the history window.
+    private func handleSyncResponse(_ packet: Packet, from linkID: LinkID) {
+        let current = now()
+        guard var pending = pendingSyncs[linkID], pending.remaining > 0,
+              current.timeIntervalSince(pending.requested) <= config.syncResponseWindow
+        else { return } // unsolicited, late, or more than we asked for
+        pending.remaining -= 1
+        pendingSyncs[linkID] = pending
+
+        guard let payload = try? SyncResponsePayload.decode(packet.payload),
+              let message = try? Packet.decode(payload.message), message.type == .publicMessage,
+              let announcePacket = try? Packet.decode(payload.announce), announcePacket.type == .announce,
+              message.sender == announcePacket.sender,
+              let announce = try? AnnouncePayload.decode(announcePacket.payload),
+              let announceSignature = announcePacket.signature,
+              IdentityKeys.verify(announceSignature, for: announcePacket.signingBytes(), signingKey: announce.signingKey),
+              let signature = message.signature,
+              IdentityKeys.verify(signature, for: message.signingBytes(), signingKey: announce.signingKey),
+              let text = try? PublicMessagePayload.decode(message.payload)
+        else { return }
+
+        let sent = Date(milliseconds: message.timestamp)
+        guard current.timeIntervalSince(sent) <= config.publicHistoryWindow,
+              sent.timeIntervalSince(current) <= config.maxClockSkew
+        else { return }
+        if let live = peers[message.sender], live.noiseKey != announce.noiseKey { return } // ID taken by someone else
+        guard !archive.contains(message.packetID), seen.insert(message.packetID, now: current) else { return }
+
+        archive.insert(.init(message: message, announce: announcePacket)) // so we can pass it on in turn
+        let fingerprint = IdentityKeys.fingerprint(ofNoiseKey: announce.noiseKey)
+        continuation.yield(.publicHistory(ChatMessage(
+            id: message.packetID.hexString,
+            channel: .mesh,
+            senderName: Nickname.sanitize(announce.nickname),
+            senderKey: fingerprint.hex,
+            text: text.text,
+            timestamp: sent,
+            isOwn: fingerprint == myFingerprint,
+            isVerified: true
+        )))
+    }
+}
+
 // MARK: - Store and forward
 
 extension MeshNode {
     /// An envelope handed to us by a neighbour, or delivered to us by a courier.
-    private func handleCourier(_ packet: Packet) {
+    private func handleCourier(_ packet: Packet, from linkID: LinkID) {
         guard let envelope = try? CourierEnvelope.decode(packet.payload) else { return }
         let current = now()
         guard Date(milliseconds: envelope.expiry) > current else { return }
@@ -771,7 +900,11 @@ extension MeshNode {
         // Only carry envelopes handed over directly (TTL 1, no recipient), never ones
         // passing through on their way to someone else.
         guard packet.recipient == nil, packet.ttl == 1 else { return }
-        guard carried.insert(envelope, received: current) else { return }
+        // A hostile neighbour could otherwise fill every slot with junk and push out the
+        // mail we carry for others: limit how fast and how much one link can deposit.
+        guard depositLimiter.allow(linkID, now: current),
+              carried.insert(envelope, received: current, depositor: linkID, perDepositorLimit: config.maxCarriedPerDepositor)
+        else { return }
         dirty = true
         publishEnvelopes()
         // The recipient may be standing next to us already.

@@ -140,6 +140,63 @@ final class LetterboxUITests: XCTestCase {
         XCTAssertTrue(element(containing: "Verified", in: app).waitForExistence(timeout: 5), "The list shows the badge too")
     }
 
+    /// You arrive after Ana and Sam talked, and meet only Sam: what Ana said reaches you
+    /// through Sam's phone, checked against Ana's signature.
+    func testCatchingUpOnNearbyAfterArriving() {
+        let app = launch(scenario: "catchup")
+        XCTAssertTrue(element(containing: "Meet at the hut at 5", in: app).waitForExistence(timeout: 20))
+        XCTAssertTrue(element(containing: "I'll bring the stove", in: app).waitForExistence(timeout: 5))
+        let first = element(containing: "Meet at the hut at 5", in: app).frame.minY
+        let second = element(containing: "I'll bring the stove", in: app).frame.minY
+        XCTAssertLessThan(first, second, "Shown in the order they were written")
+    }
+
+    /// Krug's first question for any screen: what is this, and what can I do here?
+    func testEmptyNearbyExplainsItselfWhenAlone() {
+        let app = launch(scenario: "alone")
+        XCTAssertTrue(element(containing: "No internet or signal needed", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element(containing: "No one in range yet", in: app).exists)
+        XCTAssertTrue(app.buttons["empty-invite"].exists, "Invite is offered where you notice nobody has the app")
+    }
+
+    func testBlockingSomeoneHidesTheirMessages() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        send("hello", in: app)
+        XCTAssertTrue(element(containing: "Sam heard you", in: app).waitForExistence(timeout: 10))
+        app.buttons["people-button"].tap()
+        app.buttons["person-info-Sam"].tap()
+        let block = app.buttons["block-person"]
+        XCTAssertTrue(block.waitForExistence(timeout: 5))
+        block.tap()
+        XCTAssertTrue(app.buttons["unblock-person"].waitForExistence(timeout: 5))
+        app.navigationBars["Sam"].buttons.firstMatch.tap()
+        done(app)
+        XCTAssertFalse(element(containing: "Sam heard you", in: app).exists, "Earlier messages disappear")
+        send("anyone?", in: app)
+        Thread.sleep(forTimeInterval: 3) // Sam answers, but we don't see it
+        XCTAssertFalse(element(containing: "Sam heard you", in: app).exists)
+    }
+
+    func testEraseEverythingAsksFirstThenStops() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        openMore(app, item: "Settings")
+        let erase = app.buttons["erase-everything"]
+        // Last in Settings (where iOS puts destructive actions), so scroll down to it.
+        for _ in 0..<6 where !erase.exists { app.swipeUp() }
+        XCTAssertTrue(erase.waitForExistence(timeout: 5))
+        erase.tap()
+        // The confirmation is a separate step; its button may lose the identifier.
+        let byID = app.buttons["confirm-erase"].firstMatch
+        let confirm = byID.waitForExistence(timeout: 3)
+            ? byID
+            : app.buttons.matching(NSPredicate(format: "label == 'Erase everything'")).allElementsBoundByIndex.last!
+        confirm.tap()
+        XCTAssertTrue(element(containing: "Everything is erased", in: app).waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["send-button"].exists, "Nothing can be sent after erasing")
+    }
+
     func testPrivacyScreen() {
         let app = launch()
         waitForPeople(app, count: 1)
@@ -198,6 +255,10 @@ final class LetterboxUITests: XCTestCase {
         openMore(app, item: "Send outside Letterbox")
         let invite = app.buttons["outside-invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containing: "Your message", in: app).exists || app.textViews["outside-text"].exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "outside-share-waiting").firstMatch.exists,
+                      "Says what it does, greyed until there's a message")
+        XCTAssertFalse(app.buttons["outside-share"].exists)
         invite.tap()
         XCTAssertTrue(shareSheet(app).waitForExistence(timeout: 10), "The system share sheet (AirDrop) should open")
         screenshot("share-invite")
@@ -292,6 +353,9 @@ final class LetterboxUITests: XCTestCase {
 
         openMore(app, item: "Settings")
         try audit(app, "Settings", into: &problems)
+        // Settings is longer than the screen: check the bottom too (How it works, Erase).
+        for _ in 0..<4 { app.swipeUp() }
+        try audit(app, "Settings, scrolled to the end", scrolled: true, into: &problems)
         done(app)
 
         openMore(app, item: "Send outside Letterbox")
@@ -303,11 +367,21 @@ final class LetterboxUITests: XCTestCase {
 
     /// Runs Apple's accessibility audit on the current screen and collects what it finds,
     /// so one run reports every screen.
-    private func audit(_ app: XCUIApplication, _ screen: String, into problems: inout [String]) throws {
+    /// - Parameter scrolled: The screen was scrolled down, so rows near the top sit under
+    ///   the bar's frosted fade. Those rows were already checked unscrolled.
+    private func audit(_ app: XCUIApplication, _ screen: String, scrolled: Bool = false,
+                       into problems: inout [String]) throws {
         // Let presentation and fade-in animations finish: mid-animation colours are
         // partly transparent and would be measured as low contrast.
         Thread.sleep(forTimeInterval: 2)
+        // What the audit saw, kept only if the test fails, to tell real problems from
+        // artefacts of position (fades, clipping at the screen edge).
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "audit-\(screen)"
+        shot.lifetime = .deleteOnSuccess
+        add(shot)
         var found: [String] = []
+        let screenBottom = app.windows.firstMatch.frame.maxY
         let keyboard = app.keyboards.firstMatch
         let keyboardFrame = keyboard.exists ? keyboard.frame : .null
         try app.performAccessibilityAudit { issue in
@@ -329,10 +403,18 @@ final class LetterboxUITests: XCTestCase {
             // (since darkened to 9.5:1), well above 4.5:1. Only clock-time labels are excused.
             if issue.auditType == .contrast, let element,
                element.label.range(of: #"^\d{1,2}:\d{2}( ?[AP]M)?$"#, options: .regularExpression) != nil { return true }
+            // Scrolled: content under the top bar's fade is measured through the blur (and
+            // shows up as an unnamed element). The unscrolled audit of the same screen
+            // checks those rows in the clear, and reports unnamed problems there.
+            if scrolled, issue.auditType == .contrast, element.map({ $0.frame.minY < 180 }) ?? true { return true }
+            // A row cut off by the bottom of the screen is measured half-drawn. Long screens
+            // are audited again scrolled to the end, where the same row is fully visible.
+            if issue.auditType == .contrast, let element, element.frame.maxY > screenBottom - 4 { return true }
             // List section headers and footers stop growing at accessibility sizes; that's
             // how iOS lists work and isn't something an app can change. (They're still
             // checked for contrast.)
-            if issue.auditType == .dynamicType, let element,
+            // The audit enlarges text and then reports them as clipped too: same cause.
+            if issue.auditType == .dynamicType || issue.auditType == .textClipped, let element,
                ["section-header", "section-footer"].contains(element.identifier) { return true }
             // Rows lower in a list get pushed off screen when the audit enlarges the text, so
             // it can't measure them and reports "partially unsupported". The largest-text

@@ -62,6 +62,63 @@ struct PeerRecord {
     let fingerprint: Fingerprint
     var lastSeen: Date
     var directLinks: Set<LinkID>
+    /// Their latest signed announce, passed on with their #nearby messages so a phone
+    /// that catches up later can check who wrote them.
+    var announce: Packet?
+}
+
+/// Recent #nearby messages (with their authors' announces) kept in memory to pass on to
+/// phones that missed them: someone who walked out of range, arrived late, or restarted.
+/// Bounded by count and age; only messages whose signature was checked are kept.
+struct PublicArchive {
+    struct Entry {
+        let message: Packet
+        let announce: Packet
+    }
+
+    private(set) var entries: [Data: Entry] = [:]
+    private let capacity: Int
+
+    init(capacity: Int) {
+        self.capacity = capacity
+    }
+
+    var count: Int { entries.count }
+
+    func contains(_ id: Data) -> Bool { entries[id] != nil }
+
+    mutating func insert(_ entry: Entry) {
+        entries[entry.message.packetID] = entry
+        guard entries.count > capacity else { return }
+        let oldest = entries.values.sorted { $0.message.timestamp < $1.message.timestamp }.prefix(entries.count - capacity)
+        for entry in oldest { entries[entry.message.packetID] = nil }
+    }
+
+    mutating func prune(olderThan cutoff: UInt64) {
+        entries = entries.filter { $0.value.message.timestamp >= cutoff }
+    }
+
+    /// IDs we hold, newest first.
+    func ids(limit: Int) -> [Data] {
+        entries.values.sorted { $0.message.timestamp > $1.message.timestamp }.prefix(limit).map(\.message.packetID)
+    }
+
+    /// What the other phone lacks: the newest `limit` messages since `since` that aren't
+    /// in `have`, oldest first so they arrive in reading order.
+    func missing(from have: Set<Data>, since: UInt64, limit: Int) -> [Entry] {
+        entries.values
+            .filter { $0.message.timestamp >= since && !have.contains($0.message.packetID) }
+            .sorted { $0.message.timestamp > $1.message.timestamp }
+            .prefix(limit)
+            .reversed()
+    }
+}
+
+/// A catch-up request we sent on one link: answers are accepted only for a short while,
+/// and only as many as we asked for.
+struct PendingSync {
+    let requested: Date
+    var remaining: Int
 }
 
 enum Session {

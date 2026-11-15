@@ -1,0 +1,30 @@
+{
+  "_comment" : [
+    "Golden vectors for the Letterbox wire format (packet version 1, magic \"LB\").",
+    "Generated from the Swift implementation and asserted by WireVectorTests, so they can't drift",
+    "from the code without a test failing. Hex is lowercase; integers are big-endian.",
+    "Inputs are synthetic: noise private 01..20, signing private 21..40, other noise private 41..60,",
+    "timestamp 1800000000000 ms, packetID 0102030405060708, sender 1122334455667788,",
+    "recipient 99aabbccddeeff00, envelope id 00..0f, expiry 1800259200000 ms.",
+    "Traps for other implementations:",
+    "  1. Timestamps and expiry are MILLISECONDS. Seconds read as 1970 and are dropped as stale.",
+    "  2. Signatures cover signingBytes (TTL 0, no signature, hasSignature flag clear), not the wire bytes.",
+    "  3. Ed25519 signatures from CryptoKit are randomised: pin the bytes signed, not the signature.",
+    "  4. syncRequest and syncResponse travel with TTL 1 and are never relayed."
+  ],
+  "vectors" : {
+    "courier.associatedData (Noise X prologue)" : "6c6574746572626f782f636f75726965722f31000102030405060708090a0b0c0d0e0f3d0964ba193f4beb751b2d5026350efc000001a327cf6400",
+    "courier.recipientTag" : "3d0964ba193f4beb751b2d5026350efc",
+    "identity.fingerprint (SHA-256 of noisePublic)" : "aaa8fff703b50b2297f4f6e13508f72420d96fd01ebb84cb074449caaef64041",
+    "identity.noisePublic" : "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c",
+    "identity.signingPublic" : "e7f162a10bec559afea195e4dce84b69568d5d2cb0963eb446c0685e2b17f2f0",
+    "packet.directed.encoded (hasRecipient flag, no signature)" : "4c4201110701000001a3185c50000102030405060708112233445566778899aabbccddeeff000002dead",
+    "packet.publicMessage.encoded (placeholder signature 0xAB x 64)" : "4c4201020702000001a3185c5000010203040506070811223344556677880018010003616e6102000f6d6565742061742074686520687574abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab",
+    "packet.publicMessage.signingBytes (ttl 0, no signature, hasSignature flag clear)" : "4c4201020000000001a3185c5000010203040506070811223344556677880018010003616e6102000f6d6565742061742074686520687574",
+    "payload.announce" : "010003616e6102002007a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c030020e7f162a10bec559afea195e4dce84b69568d5d2cb0963eb446c0685e2b17f2f0",
+    "payload.publicMessage" : "010003616e6102000f6d6565742061742074686520687574",
+    "payload.syncRequest" : "010008000001a31825618002001001020304050607080909090909090909",
+    "verify.qrPayload" : "letterbox:verify:1:aaa8fff703b50b2297f4f6e13508f72420d96fd01ebb84cb074449caaef64041",
+    "verify.safetyNumber" : "8055 4581 4465 0503 9819 5164 2122 6919"
+  }
+}

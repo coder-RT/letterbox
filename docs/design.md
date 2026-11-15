@@ -47,6 +47,9 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | More | `ellipsis.circle` | Standard overflow menu |
 | Send outside Letterbox | `square.and.arrow.up` | The system's share symbol: it opens the share sheet, with AirDrop first |
 | Invite someone | `person.badge.plus` | Adding a person |
+| Alerts setting | `bell.badge` | The system's notification symbol |
+| Erase everything | `trash` | Deleting, shown in red with a confirmation |
+| Block, unblock | `nosign` | "Not allowed"; `hand.raised` already means the privacy screen |
 
 ### Licensing
 
@@ -85,3 +88,45 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 **Still to do:**
 - Reduce Motion: the blur animation is short, but should respect the setting.
 - Localisation: strings are English-only.
+
+## Usability review: lessons from *Don't Make Me Think*
+
+Reviewed 2026-11-15 against Steve Krug's *Don't Make Me Think, Revisited* (3rd edition), using the current screenshots. The book's main point fits a hiking app well: people scan rather than read, take the first option that looks right, and muddle through rather than learn how things work. On a trail they'll also be cold, tired and wearing gloves.
+
+### What changed
+
+| Screen | Problem | Principle | Change |
+|---|---|---|---|
+| Empty chat | "No messages yet. Say hi." didn't say what #nearby is, that it needs no signal, or what happens to messages sent when nobody's around | Every screen should answer "what is this, and what can I do here?" | Each kind of conversation explains itself: #nearby says it needs no internet, who's in range, and that people arriving in the next 12 hours can catch up; alone, it offers Invite. Private chats say only the two of you can read them and that Letterbox keeps trying for 3 days. Location channels say relays see your IP |
+| Failed private message | A red mark with nothing to do about it | Make it easy to recover from errors | It says "Not delivered. Hold to send again" in words, and the long-press menu has **Send again** |
+| Send outside Letterbox | The message box was a blank white area; the disabled button below it read "Type a message to send", so it looked like the place to type | Make it obvious what can be tapped and typed in | The box shows "Your message". The button always reads "Send via AirDrop or another app" and is grey until there's text. The three notes became one footer right under the button: brief, timely and hard to miss |
+| Settings | Erase everything sat in the middle, above "How it works" | Follow conventions | Moved to the bottom, where iOS puts destructive actions |
+| Sheets opened from the "…" menu | On iOS 27 the keyboard stayed up over the sheet and hid half of Settings (found by the accessibility audit) | Don't hide what people came to see | Opening any sheet now closes the keyboard |
+| All sheets | Footers of two or three sentences | Cut half the words, then half of what's left | Footers for Alerts, Erase, your code, the safety number, envelopes, connections and invite cut to one or two short sentences, with no information lost |
+
+### What already held up
+
+- **Screen names match what you tapped:** "…" → Send outside Letterbox opens "Send outside Letterbox"; the people count opens "Nearby"; the connection icons open "Connections".
+- **Conventions:** system sheets, Done buttons, lists, the share sheet, SF Symbols, and a composer placeholder that says where the message goes ("Message everyone nearby").
+- **Accessibility:** Apple's audit runs on every screen in the UI tests, and long screens are now also audited scrolled to the end. It caught two contrast problems and the keyboard bug in this pass. Each audited screen's screenshot is attached when the test fails. The audit also checks Dynamic Type up to the largest size and VoiceOver labels. Krug's own three-second test is making the text bigger, which the screenshot test covers.
+- **Honesty:** the Connections panel says satellite can't be checked, rather than guessing. The book's chapter on courtesy calls this telling people what they want to know.
+
+### Still open
+
+- **The connection icons at top left are icons only.** They're labelled for VoiceOver, but a first-time user may not know what they mean. Watch for this in the test below before adding words; the bar is tight.
+- **Nobody has used Letterbox in a test yet.** The book's strongest advice is to watch three people try it; everything above is expert review, which it calls a poor substitute.
+
+### Usability test script (three people, one morning)
+
+Krug recommends a small test with three people often over a large one rarely. Use two phones, one with Letterbox and a helper on the other, and someone who hasn't seen the app. Ask them to think aloud. Don't help: note where they hesitate.
+
+1. **Get it test:** show the empty #nearby screen for 10 seconds. "What do you think this app does?"
+2. "Send a message to everyone around you."
+3. "Send Sam a private message that nobody else can read."
+4. "Did Sam get it? How can you tell?"
+5. "You're at the hut and don't want people reading over your shoulder. Hide your messages."
+6. "Is your phone connected to the internet right now? Can Letterbox reach anyone?"
+7. "Your friend doesn't have Letterbox. Send them 'Meet at the car park at 6'."
+8. "You're lending your phone to someone. Remove everything Letterbox knows about you."
+
+Afterwards, fix the one or two problems that tripped up most people, then test again. Record what you found here.

@@ -40,6 +40,8 @@ final class AppContainer {
         }
         #endif
         let secrets = KeychainSecretStore()
+        // Keychain items outlive an uninstall; a reinstall shouldn't bring the old identity back.
+        FreshInstall.clearLeftoverSecrets(secrets: secrets, existingSettingKey: "nickname")
         let identity = Self.loadIdentity(from: secrets)
         let seed = Self.loadSeed(from: secrets)
 
@@ -55,7 +57,9 @@ final class AppContainer {
             settings: UserDefaultsSettingsStore(),
             connectivity: SystemConnectivityMonitor(),
             // Who you've verified stays encrypted on disk.
-            appState: EncryptedFileStore(fileURL: Self.stateURL("app-state.bin"), secrets: secrets, keyName: SecretKey.appState)
+            appState: EncryptedFileStore(fileURL: Self.stateURL("app-state.bin"), secrets: secrets, keyName: SecretKey.appState),
+            notifier: SystemMessageNotifier(),
+            eraser: DeviceDataEraser(secrets: secrets, directory: Self.stateDirectory)
         )
     }
 
@@ -68,10 +72,15 @@ final class AppContainer {
 
     private static var meshStateURL: URL { stateURL("mesh-state.bin") }
 
-    private static func stateURL(_ name: String) -> URL {
+    /// Letterbox's own folder: everything in it is erased by "Erase everything".
+    private static var stateDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("Letterbox", isDirectory: true).appendingPathComponent(name)
+        return base.appendingPathComponent("Letterbox", isDirectory: true)
+    }
+
+    private static func stateURL(_ name: String) -> URL {
+        stateDirectory.appendingPathComponent(name)
     }
 
     private static func loadIdentity(from secrets: SecretStore) -> IdentityKeys {
