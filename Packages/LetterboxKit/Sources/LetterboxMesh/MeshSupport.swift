@@ -33,13 +33,16 @@ struct SeenPackets {
 
 /// Bounded set of recently received direct-message IDs (drops resent duplicates).
 struct RecentIDs {
-    private var order: [String] = []
+    private(set) var order: [String] = []
     private var set: Set<String> = []
     private let capacity: Int
 
-    init(capacity: Int = 2000) {
+    init(capacity: Int = 2000, restoring saved: [String] = []) {
         self.capacity = capacity
+        for id in saved.suffix(capacity) { _ = insert(id) }
     }
+
+    func contains(_ id: String) -> Bool { set.contains(id) }
 
     mutating func insert(_ id: String) -> Bool {
         guard set.insert(id).inserted else { return false }
@@ -83,4 +86,45 @@ struct OutgoingPrivate {
         if case let .message(id, _, _, _) = payload { return id }
         return nil
     }
+}
+
+/// Token buckets keyed by anything (a sender, a Bluetooth link). Each key may spend up
+/// to `capacity` tokens at once, refilled at `perMinute`. Bounded in memory: idle keys
+/// are forgotten, and at most `maxKeys` are tracked (the stalest go first).
+struct RateLimiter<Key: Hashable> {
+    private struct Bucket {
+        var tokens: Double
+        var updated: Date
+    }
+
+    private var buckets: [Key: Bucket] = [:]
+    let capacity: Double
+    let perMinute: Double
+    let maxKeys: Int
+
+    init(capacity: Double, perMinute: Double, maxKeys: Int = 1024) {
+        self.capacity = capacity
+        self.perMinute = perMinute
+        self.maxKeys = maxKeys
+    }
+
+    /// Spends one token for `key`. Returns false (and spends nothing) when it's empty.
+    mutating func allow(_ key: Key, now: Date) -> Bool {
+        var bucket = buckets[key] ?? Bucket(tokens: capacity, updated: now)
+        let elapsed = max(0, now.timeIntervalSince(bucket.updated))
+        bucket.tokens = min(capacity, bucket.tokens + elapsed * perMinute / 60)
+        bucket.updated = now
+        guard bucket.tokens >= 1 else {
+            buckets[key] = bucket
+            return false
+        }
+        bucket.tokens -= 1
+        if buckets[key] == nil, buckets.count >= maxKeys, let stalest = buckets.min(by: { $0.value.updated < $1.value.updated })?.key {
+            buckets[stalest] = nil
+        }
+        buckets[key] = bucket
+        return true
+    }
+
+    var trackedKeys: Int { buckets.count }
 }

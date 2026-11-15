@@ -1,5 +1,6 @@
 import LetterboxDomain
 import SwiftUI
+import UniformTypeIdentifiers
 #if os(iOS)
 import UIKit
 #else
@@ -165,7 +166,11 @@ struct MessageRow: View {
 enum Clipboard {
     static func copy(_ text: String) {
         #if os(iOS)
-        UIPasteboard.general.string = text
+        // SEC-09: stays on this phone (no Universal Clipboard) and clears itself after 2 minutes.
+        UIPasteboard.general.setItems(
+            [[UTType.utf8PlainText.identifier: text]],
+            options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)]
+        )
         #else
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)

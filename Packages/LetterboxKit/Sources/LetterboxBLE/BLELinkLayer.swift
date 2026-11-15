@@ -22,6 +22,10 @@ public final class BLELinkLayer: NSObject, LinkLayer, @unchecked Sendable {
     nonisolated(unsafe) public static let characteristicUUID = CBUUID(string: "A8A91EB3-9188-420C-8CCA-F5DD018BABAD")
 
     private static let maxCentralLinks = 8
+    /// Chunks waiting per outgoing link, and in total for notifications (SEC-08). A slow
+    /// or flooded link drops new frames instead of growing memory without limit.
+    private static let maxQueuedWriteChunks = 1024
+    private static let maxQueuedNotifyChunks = 4096
     private static let minimumRSSI = -92
 
     public let events: AsyncStream<LinkEvent>
@@ -131,11 +135,20 @@ public final class BLELinkLayer: NSObject, LinkLayer, @unchecked Sendable {
         case let .outgoing(uuid):
             guard let peripheral = peripherals[uuid], remoteCharacteristics[uuid] != nil else { return }
             let mtu = peripheral.maximumWriteValueLength(for: .withoutResponse)
-            writeQueues[uuid, default: []].append(contentsOf: LinkFramer.chunks(for: frame, frameID: makeFrameID(), mtu: mtu))
+            let chunks = LinkFramer.chunks(for: frame, frameID: makeFrameID(), mtu: mtu)
+            guard (writeQueues[uuid]?.count ?? 0) + chunks.count <= Self.maxQueuedWriteChunks else {
+                log.debug("write queue full, frame dropped")
+                return
+            }
+            writeQueues[uuid, default: []].append(contentsOf: chunks)
             drainWrites(to: peripheral)
         case let .incoming(uuid):
             guard let central = subscribers[uuid] else { return }
             let chunks = LinkFramer.chunks(for: frame, frameID: makeFrameID(), mtu: central.maximumUpdateValueLength)
+            guard notifyQueue.count + chunks.count <= Self.maxQueuedNotifyChunks else {
+                log.debug("notify queue full, frame dropped")
+                return
+            }
             notifyQueue.append(contentsOf: chunks.map { ($0, central) })
             drainNotifications()
         case nil:

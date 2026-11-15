@@ -126,4 +126,8 @@ struct MeshSnapshot: Codable {
     var outbox: [Item]
     var contacts: [Contact]
     var carried: [Carried]
+    /// Recently opened envelopes and received message IDs, so replays are recognised after
+    /// a restart (SEC-07). Optional so older state files still load.
+    var openedEnvelopes: [String]? = nil
+    var receivedMessageIDs: [String]? = nil
 }

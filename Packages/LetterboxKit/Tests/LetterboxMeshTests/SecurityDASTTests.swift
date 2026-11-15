@@ -57,8 +57,8 @@ private func config(courierDelay: TimeInterval = 10) -> MeshNode.Configuration {
 private func ms(_ offset: TimeInterval = 0) -> UInt64 { UInt64((Date().timeIntervalSince1970 + offset) * 1000) }
 
 private func node(_ name: String, _ radio: InMemoryRadio, identity: IdentityKeys = .generate(),
-                  config: MeshNode.Configuration = config()) -> (MeshNode, Watch, IdentityKeys) {
-    let mesh = MeshNode(identity: identity, nickname: name, link: radio.makeLink(name), configuration: config)
+                  config: MeshNode.Configuration = config(), store: (any BlobStore)? = nil) -> (MeshNode, Watch, IdentityKeys) {
+    let mesh = MeshNode(identity: identity, nickname: name, link: radio.makeLink(name), configuration: config, store: store)
     return (mesh, Watch(mesh), identity)
 }
 
@@ -136,7 +136,7 @@ struct SecurityDASTTests {
         #expect(fromAlice.map(\.text) == ["the real message"])
     }
 
-    // SEC-DAST-03 → finding SEC-01
+    // SEC-DAST-03 → finding SEC-01 (fixed)
     @Test func peerTableFloodWithFreshIdentities() async throws {
         let radio = InMemoryRadio()
         let (bob, bobWatch, _) = node("bob", radio)
@@ -148,12 +148,28 @@ struct SecurityDASTTests {
         _ = await until(.seconds(5)) { await bobWatch.peers.count >= 1000 }
         let peers = await bobWatch.peers.count
         print("SEC-DAST-03: peer list grew to \(peers) entries from 1000 forged identities")
-        withKnownIssue("SEC-01: the peer table has no size limit; forged identities are free to mint") {
-            #expect(peers <= 256)
-        }
+        // Fixed (SEC-01): new identities are rate-limited per link.
+        #expect(peers <= 32)
     }
 
-    // SEC-DAST-04 → finding SEC-02
+    // SEC-DAST-03b → SEC-01: many links at once still can't push past the table cap.
+    @Test func peerTableStaysCappedAcrossManyLinks() async throws {
+        let radio = InMemoryRadio()
+        let (bob, bobWatch, _) = node("bob", radio)
+        let attackers = (0..<10).map { radio.makeLink("mallory\($0)") }
+        for index in 0..<10 { radio.connect("mallory\(index)", "bob") }
+        await bob.start()
+        for (index, attacker) in attackers.enumerated() {
+            for n in 0..<40 { attacker.send(forgedAnnounce(name: "ghost\(index)-\(n)"), to: "bob") }
+        }
+        _ = await until(.seconds(5)) { await bobWatch.peers.count >= 256 }
+        try await Task.sleep(for: .milliseconds(300))
+        let peers = await bobWatch.peers.count
+        print("SEC-DAST-03b: 400 forged identities over 10 links gave \(peers) peers")
+        #expect(peers <= 256)
+    }
+
+    // SEC-DAST-04 → finding SEC-02 (fixed)
     @Test func envelopesFromAStrangerAmplifyIntoQueuedReceiptsAndCourierTraffic() async throws {
         let radio = InMemoryRadio()
         let (bob, _, bobKeys) = node("bob", radio, config: config(courierDelay: 0.2))
@@ -179,13 +195,12 @@ struct SecurityDASTTests {
         try await Task.sleep(for: .seconds(1.5)) // past the courier delay: Bob seals receipts and hands them to Carol
         let handedToCarol = frames(radio, from: "bob", to: "carol", type: .courier)
         print("SEC-DAST-04: 300 attacker envelopes made Bob hand \(handedToCarol) receipt envelopes to one neighbour")
-        withKnownIssue("SEC-02: receipts for a stranger's messages are queued without limit and spread by couriers") {
-            #expect(handedToCarol <= 50)
-        }
+        // Fixed (SEC-02): receipts per person are merged and capped.
+        #expect(handedToCarol <= 2)
     }
 
-    // SEC-DAST-05 → finding SEC-03
-    @Test func publicMessageFloodIsRelayedWithoutRateLimit() async throws {
+    // SEC-DAST-05 → finding SEC-03 (fixed)
+    @Test func publicMessageFloodIsRateLimited() async throws {
         let radio = InMemoryRadio()
         let (bob, _, _) = node("bob", radio)
         let (carol, _, _) = node("carol", radio)
@@ -204,9 +219,8 @@ struct SecurityDASTTests {
         try await Task.sleep(for: .milliseconds(500))
         let relayed = frames(radio, from: "bob", to: "carol", type: .publicMessage)
         print("SEC-DAST-05: Bob relayed \(relayed) of 500 spam messages from one sender to his neighbour")
-        withKnownIssue("SEC-03: no per-sender rate limit, so one phone can flood the whole mesh") {
-            #expect(relayed <= 100)
-        }
+        // Fixed (SEC-03): senders we can't check share a small allowance per link.
+        #expect(relayed <= 30)
     }
 
     // SEC-DAST-06
@@ -235,11 +249,12 @@ struct SecurityDASTTests {
         #expect(carried == 256)
     }
 
-    // SEC-DAST-07 → finding SEC-07
-    @Test func aReplayedEnvelopeIsShownAgainAfterTheRecipientRestarts() async throws {
+    // SEC-DAST-07 → finding SEC-07 (fixed)
+    @Test func aReplayedEnvelopeIsIgnoredEvenAfterTheRecipientRestarts() async throws {
         let radio = InMemoryRadio()
         let bobKeys = IdentityKeys.generate()
-        let (bob, bobWatch, _) = node("bob", radio, identity: bobKeys)
+        let bobStore = InMemoryBlobStore() // the app always has storage
+        let (bob, bobWatch, _) = node("bob", radio, identity: bobKeys, store: bobStore)
         let attacker = radio.makeLink("mallory")
         radio.connect("mallory", "bob")
         await bob.start()
@@ -260,17 +275,15 @@ struct SecurityDASTTests {
         try await Task.sleep(for: .milliseconds(200))
         #expect(await bobWatch.privateMessages.filter { $0.id == "once" }.count == 1)
 
-        // Bob's phone restarts (opened-envelope memory is not persisted) and the courier replays it.
+        // Bob's phone restarts and the courier replays it.
         await bob.stop()
-        let (restarted, restartedWatch, _) = node("bob", radio, identity: bobKeys)
+        let (restarted, restartedWatch, _) = node("bob", radio, identity: bobKeys, store: bobStore)
         await restarted.start()
         handOver()
         try await Task.sleep(for: .milliseconds(400))
         let shownAgain = await restartedWatch.privateMessages.contains { $0.id == "once" }
         print("SEC-DAST-07: replayed envelope after restart shown again: \(shownAgain)")
-        withKnownIssue("SEC-07: opened-envelope IDs aren't persisted, so a replay within the expiry shows the message again") {
-            #expect(!shownAgain)
-        }
+        #expect(!shownAgain)
     }
 
     // SEC-DAST-08
