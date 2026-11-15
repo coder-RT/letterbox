@@ -100,8 +100,11 @@ struct ChatScreen: View {
         // ...and everything else in one menu.
         ToolbarItem(placement: Self.trailing) {
             Menu {
-                Toggle(isOn: Binding(get: { store.hidesMessages }, set: { store.setHidesMessages($0) })) {
-                    Label("Privacy screen", systemImage: "hand.raised")
+                // A button, not a toggle: on iOS 27 a toggle leaves the menu open on top of
+                // everything. The label says what tapping will do.
+                Button { store.toggleHidesMessages() } label: {
+                    Label(store.hidesMessages ? "Turn off privacy screen" : "Privacy screen",
+                          systemImage: store.hidesMessages ? "hand.raised.slash" : "hand.raised")
                 }
                 .accessibilityIdentifier("menu-privacy")
                 Divider()

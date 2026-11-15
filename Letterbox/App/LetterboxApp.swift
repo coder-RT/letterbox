@@ -8,12 +8,18 @@ struct LetterboxApp: App {
     var body: some Scene {
         WindowGroup {
             ChatScreen()
+                #if os(macOS)
+                .frame(minWidth: 460, minHeight: 480)
+                #endif
                 .environment(container.store)
                 .tint(Theme.accent)
                 .task { await container.start() }
         }
         #if os(macOS)
-        .defaultSize(width: 420, height: 720)
+        // Wide enough for every toolbar control (connections, channel, people, menu);
+        // the window title is hidden because the channel name already says where you are.
+        .defaultSize(width: 520, height: 760)
+        .windowToolbarStyle(.unified(showsTitle: false))
         #endif
     }
 }
