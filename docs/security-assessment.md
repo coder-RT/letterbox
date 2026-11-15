@@ -152,6 +152,8 @@ The list of envelopes already opened, and the list of private message IDs alread
 - **Evidence:** `Clipboard.copy` in `MessageList.swift`.
 - **Fix:** on iOS, `UIPasteboard.general.setItems(_, options: [.localOnly: true, .expirationDate: now + 2 min])`.
 
+**Note on sharing outside Letterbox (added later):** "Send outside Letterbox" and "Send via AirDrop…" hand text to the system share sheet. AirDrop is encrypted between the two devices, but Messages, Mail and other apps send it outside Letterbox's end-to-end encryption, and the sheet says so. Sharing is offered only for your own messages, and never while the privacy screen hides them (UI test `testOwnMessageCanBeSentViaAirDropOnlyWhileVisible`).
+
 ### SEC-10 Test-only code is linked into Release builds (Low)
 
 The UI-test mode is compiled out of Release: `strings` finds no `-ui-testing` flag and no `UITestWorld`. But the `LetterboxTestSupport` library is still linked, so `InMemoryRadio`, `SimulatedPhone` and `ScriptedConnectivityMonitor` ship in the binary unused.

@@ -10,7 +10,7 @@ struct ChatScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case channels, people, settings, connections, envelopes
+        case channels, people, settings, connections, envelopes, outside
         var id: String { rawValue }
     }
 
@@ -32,6 +32,7 @@ struct ChatScreen: View {
                     case .people: PeopleSheet()
                     case .settings: SettingsSheet()
                     case .connections: ConnectionsSheet()
+                    case .outside: OutsideMessageSheet(draft: draft, nickname: store.nickname)
                     case .envelopes:
                         NavigationStack {
                             EnvelopesView().toolbar {
@@ -108,6 +109,13 @@ struct ChatScreen: View {
                 }
                 .accessibilityIdentifier("menu-privacy")
                 Divider()
+                // Reaching people without Letterbox (invite, or a one-way AirDrop message).
+                // One entry, so the menu stays short enough at the largest text sizes.
+                Button { sheet = .outside } label: {
+                    Label("Send outside Letterbox…", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("menu-outside")
+                Divider()
                 Button { sheet = .envelopes } label: { Label("Envelopes", systemImage: "envelope") }
                     .accessibilityIdentifier("menu-envelopes")
                 Button { sheet = .connections } label: { Label("Connections", systemImage: "antenna.radiowaves.left.and.right") }
@@ -117,6 +125,9 @@ struct ChatScreen: View {
             } label: {
                 Label("More", systemImage: "ellipsis.circle")
             }
+            // The keyboard sits above app menus; at large text sizes it would hide the last
+            // items. Opening the menu puts the keyboard away so every item is reachable.
+            .simultaneousGesture(TapGesture().onEnded { composerFocused = false })
             .accessibilityIdentifier("more-menu")
                 .accessibilityShowsLargeContentViewer()
         }

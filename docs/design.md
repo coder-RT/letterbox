@@ -45,6 +45,8 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | Satellite | `dot.radiowaves.up.forward` | Signal going up |
 | In direct range, via others | `dot.radiowaves.left.and.right`, `point.3.connected.trianglepath.dotted` | Direct versus hopping |
 | More | `ellipsis.circle` | Standard overflow menu |
+| Send outside Letterbox | `square.and.arrow.up` | The system's share symbol: it opens the share sheet, with AirDrop first |
+| Invite someone | `person.badge.plus` | Adding a person |
 
 ### Licensing
 

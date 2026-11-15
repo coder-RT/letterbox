@@ -5,6 +5,7 @@ A peer-to-peer chat app for iPhone and Mac with no accounts and no servers.
 - **Nearby chat over Bluetooth.** Phones form a mesh, and messages hop phone to phone (up to 7 hops) with no internet.
 - **Private messages.** End-to-end encrypted with the Noise protocol (XX pattern). Phones that relay them see only ciphertext.
 - **Envelopes.** A private message to someone out of range is sealed and carried by hikers you pass, and delivered when one of them meets the person.
+- **Reaching people without the app.** From "… → Send outside Letterbox", invite someone to get Letterbox, or send a one-way message over AirDrop (works offline to nearby Apple devices).
 - **Connections panel.** Shows what works right now (Bluetooth, internet, Wi-Fi, mobile network, satellite, location, relays, envelopes), with switches for whether Letterbox may use Bluetooth and the internet.
 - **Location channels.** Public chat rooms for your area (block to region), carried over public Nostr relays when you have internet.
 
@@ -110,7 +111,7 @@ Types: `announce` 0x01, `publicMessage` 0x02, `leave` 0x03, `handshake` 0x10, `e
 
 ## Tests
 
-`make test` runs 323 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 11 iPhone UI tests in the simulator:
+`make test` runs 328 package tests (parameterized tests count once), all without a device or radio, and `make ui-test` runs 14 iPhone UI tests in the simulator:
 - **Domain:** geohash encoding at every level and the map's edges, nickname cleaning, identifiers and hex parsing
 - **Wire format:** every packet type, the exact byte layout, forward-compatible TLV fields, payload limits, BLE chunking across MTUs, and fuzzing with random bytes and every single-bit flip
 - **Crypto:** the Noise implementation byte for byte against the published conformance vectors, handshake turn-taking and tampering, nonce encoding, the replay window, and signatures
