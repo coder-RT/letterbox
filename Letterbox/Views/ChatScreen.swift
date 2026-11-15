@@ -10,17 +10,28 @@ struct ChatScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case channels, people, settings, connections, envelopes
+        case channels, people, settings, connections, envelopes, outside
         var id: String { rawValue }
     }
 
     var body: some View {
+        // After "Erase everything" the chat is gone entirely, not just covered.
+        if store.isErased {
+            ErasedScreen()
+        } else {
+            chat
+        }
+    }
+
+    private var chat: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 RadioBanner(state: store.radio)
                 if store.hidesMessages { PrivacyBanner() }
                 MessageList(messages: store.messages(in: store.selectedChannel), hidesText: store.hidesMessages,
-                            envelopes: store.envelopes)
+                            envelopes: store.envelopes,
+                            emptyState: AnyView(ChatEmptyState(channel: store.selectedChannel)),
+                            sendAgain: { message in Task { await store.sendAgain(message) } })
                 composer
             }
             .inlineTitle()
@@ -32,6 +43,7 @@ struct ChatScreen: View {
                     case .people: PeopleSheet()
                     case .settings: SettingsSheet()
                     case .connections: ConnectionsSheet()
+                    case .outside: OutsideMessageSheet(draft: draft, nickname: store.nickname)
                     case .envelopes:
                         NavigationStack {
                             EnvelopesView().toolbar {
@@ -47,6 +59,11 @@ struct ChatScreen: View {
             }
         }
         .overlay { if showsPrivacyCover { PrivacyCover() } }
+        // Any sheet closes the keyboard. iOS 27 left it up over sheets opened from the
+        // menu, covering half of Settings.
+        .onChange(of: sheet) { _, opened in if opened != nil { composerFocused = false } }
+        // Alerts go to the lock screen only while Letterbox is off screen.
+        .onChange(of: scenePhase, initial: true) { _, phase in store.setActive(phase == .active) }
     }
 
     /// In privacy mode, cover the screen while the app is inactive so the app
@@ -108,6 +125,13 @@ struct ChatScreen: View {
                 }
                 .accessibilityIdentifier("menu-privacy")
                 Divider()
+                // Reaching people without Letterbox (invite, or a one-way AirDrop message).
+                // One entry, so the menu stays short enough at the largest text sizes.
+                Button { sheet = .outside } label: {
+                    Label("Send outside Letterbox…", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("menu-outside")
+                Divider()
                 Button { sheet = .envelopes } label: { Label("Envelopes", systemImage: "envelope") }
                     .accessibilityIdentifier("menu-envelopes")
                 Button { sheet = .connections } label: { Label("Connections", systemImage: "antenna.radiowaves.left.and.right") }
@@ -117,6 +141,9 @@ struct ChatScreen: View {
             } label: {
                 Label("More", systemImage: "ellipsis.circle")
             }
+            // The keyboard sits above app menus; at large text sizes it would hide the last
+            // items. Opening the menu puts the keyboard away so every item is reachable.
+            .simultaneousGesture(TapGesture().onEnded { composerFocused = false })
             .accessibilityIdentifier("more-menu")
                 .accessibilityShowsLargeContentViewer()
         }
@@ -220,6 +247,92 @@ private struct PrivacyCover: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+    }
+}
+
+/// An empty conversation says what it is and what happens to what you send, so a
+/// first-time user (or one alone on a trail) doesn't have to guess.
+private struct ChatEmptyState: View {
+    @Environment(ChatStore.self) private var store
+    let channel: ChannelID
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.title)
+                .foregroundStyle(Theme.accent)
+                .accessibilityHidden(true)
+            Text(title)
+                .font(.headline)
+            Text(explanation)
+                .font(.callout)
+                .foregroundStyle(Theme.secondaryText)
+            if let status {
+                Text(status)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            if channel == .mesh, store.peers.isEmpty {
+                ShareLink(item: ShareText.invite(from: store.nickname)) {
+                    Label("Invite someone to get Letterbox", systemImage: "person.badge.plus")
+                }
+                .buttonStyle(.bordered)
+                .padding(.top, 4)
+                .accessibilityIdentifier("empty-invite")
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 420)
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("empty-chat")
+    }
+
+    private var symbol: String {
+        switch channel {
+        case .mesh: "antenna.radiowaves.left.and.right"
+        case .direct: "lock"
+        case .location: "globe"
+        }
+    }
+
+    private var title: String {
+        switch channel {
+        case .mesh: "#nearby"
+        case let .direct(fingerprint): store.peer(for: fingerprint)?.nickname ?? store.directContacts[fingerprint] ?? "Private chat"
+        case let .location(geohash): "#\(geohash)"
+        }
+    }
+
+    private var explanation: String {
+        switch channel {
+        case .mesh: "Chat with everyone around you who has Letterbox. No internet or signal needed."
+        case .direct: "Only the two of you can read these. If they're out of range, Letterbox keeps trying for 3 days."
+        case .location: "Public chat for this area, over the internet. Relays can see your IP address."
+        }
+    }
+
+    private var status: String? {
+        guard channel == .mesh else { return nil }
+        switch store.peers.count {
+        case 0: return "No one in range yet. Anyone who comes by in the next 12 hours can still catch up on what you send."
+        case 1: return "1 person in range. Say hi."
+        case let count: return "\(count) people in range. Say hi."
+        }
+    }
+}
+
+/// After "Erase everything": nothing is left to show, and nothing runs until reopened.
+private struct ErasedScreen: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("Everything is erased", systemImage: "trash")
+        } description: {
+            Text("Your identity, messages, envelopes and settings are gone from this device. Close Letterbox. Next time it opens, you'll start as someone new.")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
+        .accessibilityIdentifier("erased-screen")
     }
 }
 

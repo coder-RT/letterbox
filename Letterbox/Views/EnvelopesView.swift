@@ -47,7 +47,7 @@ struct EnvelopesView: View {
             } header: {
                 SectionHeader("Carrying for others")
             } footer: {
-                SectionFooter("These are sealed: you can't read them. Letterbox hands each one over automatically if you meet the person it's for, and drops it after 3 days.")
+                SectionFooter("Sealed, so you can't read them. Handed over if you meet the person it's for; dropped after 3 days.")
             }
         }
         // Keep the first header clear of the bar's scroll-edge fade.

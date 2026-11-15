@@ -17,9 +17,10 @@ The four ways to send a text, from most to least everyday:
 
 Do all of this at home, while you still have internet. Once you're on the trail it's too late to download anything.
 
-- [ ] Everyone in the group installs Letterbox and opens it once.
+- [ ] Everyone in the group installs Letterbox and opens it once. Someone missing it? Use **… → Send outside Letterbox → Invite them** to AirDrop a note with how to get it.
 - [ ] Everyone sets a nickname people will recognise: Settings → Nickname.
 - [ ] Verify each other in person: open Nearby, tap ⓘ next to your friend, and scan their code (or check the safety number matches on both screens). They get a Verified badge, and Letterbox warns you if someone else ever uses their name.
+- [ ] Send one message, and tap **Allow** when Letterbox asks to send alerts. Then a reply wakes you up with the phone in your pocket. Alerts don't show names or text unless you turn that on in Settings → Alerts.
 - [ ] Test it: put everyone's phones in airplane mode with Bluetooth on, and send a message in #nearby.
 - [ ] Check whether your phone and plan support satellite texting, and try the demo if your phone has one.
 - [ ] Save the trail's emergency number and the ranger station's number in your contacts.
@@ -45,17 +46,20 @@ Letterbox sends texts phone to phone over Bluetooth, so it works deep in a valle
 - **What's working right now:** tap the connection icons at the top left. The Connections panel shows Bluetooth, internet, Wi-Fi, mobile signal, location and envelopes, and what each one lets you do. Satellite can't be checked by apps, so it says so.
 - **Switches:** in the same panel you can stop Letterbox using the internet (so relays never see your IP) or Bluetooth. On the trail, leave Bluetooth on.
 - **The eye button** blurs messages so others at the hut can't read your screen.
+- **Missed something?** When you come back within range of anyone in the group, Letterbox fetches the #nearby messages from the last 12 hours that you missed. They appear in order, with names checked.
+- **Block someone** who spams #nearby: People, ⓘ next to their name, Block.
 
 **Limits to know**
 
-- Keep Letterbox open on screen when you're waiting for messages. In the background the phone may slow it down or pause it.
-- Conversations exist only while the app is open. Your own undelivered private messages are the exception: they're saved and keep trying after a restart.
+- In the background, or with the phone locked, Letterbox keeps listening, but iOS slows Bluetooth down, so messages can take longer. If iOS closes it to save memory, it starts again when someone comes in range. If you swipe it away yourself, it stays closed until you open it.
+- Conversations live only in memory. After a restart, #nearby refills from the people around you; your own undelivered private messages are saved and keep trying.
 - A private message to someone out of range waits on your phone for up to 3 days, and goes as soon as they come within reach.
 - **Other hikers can carry it in an envelope.** If you've met the person before, Letterbox seals the message in an envelope and hands copies to people who pass you. When one of them meets your friend, it's delivered. An envelope icon with a number next to your message means that many hikers are carrying it. They can't read it.
 - **See your envelopes:** tap the connection icons at the top left, then Envelopes. You'll see yours on their way, and how many you carry for others.
 - So a group that splits up can still swap messages: anyone walking between the groups carries them across.
 - Location channels need internet, so they won't work on the trail. Use #nearby.
 - A question mark next to a name means Letterbox couldn't confirm who sent that message.
+- **Someone without Letterbox?** Bluetooth chat needs the app on both phones. Use **… → Send outside Letterbox** to AirDrop them a message: it works with no internet to iPhones, iPads and Macs nearby, and they tap Accept. It's one-way, so they can't reply in Letterbox.
 
 ## Plain SMS: one bar is often enough
 

@@ -74,6 +74,47 @@ final class DeviceTests: XCTestCase {
         attachScreenshot("device-connections-bottom")
     }
 
+    /// A real AirDrop to a nearby Mac from "Send outside Letterbox". Enable with
+    /// `TEST_RUNNER_AIRDROP_TARGET=<part of the Mac's AirDrop name>`; the name is never stored.
+    func testAirDropToMacFromSendOutside() throws {
+        guard let target = ProcessInfo.processInfo.environment["AIRDROP_TARGET"], !target.isEmpty else {
+            throw XCTSkip("Set TEST_RUNNER_AIRDROP_TARGET to part of the Mac's AirDrop name")
+        }
+        let app = launchRealApp()
+        let more = app.buttons["more-menu"]
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        more.tap()
+        let entry = app.descendants(matching: .any).matching(identifier: "menu-outside").firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 5))
+        entry.tap()
+
+        let stamp = Date().formatted(date: .omitted, time: .standard)
+        let text = "Letterbox AirDrop test \(stamp)"
+        let editor = app.textViews["outside-text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        editor.tap()
+        editor.typeText(text)
+        // Just the message for this test: tap the switch itself (tapping its label does nothing).
+        let invite = app.switches["outside-add-invite"].firstMatch
+        invite.switches.firstMatch.tap()
+        XCTAssertEqual(invite.value as? String, "0", "The invite line should now be off")
+        app.buttons["outside-share"].tap()
+
+        // The system share sheet: AirDrop, then the Mac.
+        let airdrop = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'AirDrop'")).firstMatch
+        XCTAssertTrue(airdrop.waitForExistence(timeout: 10), "AirDrop should be offered")
+        airdrop.tap()
+        let mac = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] %@", target)).firstMatch
+        XCTAssertTrue(mac.waitForExistence(timeout: 30), "The Mac should appear in AirDrop")
+        attachScreenshot("airdrop-devices")
+        mac.tap()
+        let status = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'Sent' OR label CONTAINS[c] 'Delivered'")).firstMatch
+        let sent = status.waitForExistence(timeout: 60)
+        attachScreenshot("airdrop-after-send")
+        print("REAL AIRDROP: sent=\(sent) text=\(text)")
+        XCTAssertTrue(sent, "AirDrop should report the text as sent")
+    }
+
     func testRealBluetoothWithMac() throws {
         guard ProcessInfo.processInfo.environment["EXPECT_MAC_PEER"] == "1" else {
             throw XCTSkip("Set TEST_RUNNER_EXPECT_MAC_PEER=1 with the Mac app running nearby")

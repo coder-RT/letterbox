@@ -13,19 +13,21 @@ struct MessageList: View {
     var hidesText = false
     /// How many hikers carry each of our messages that's in an envelope.
     var envelopes = EnvelopeSummary.empty
+    /// Shown when there are no messages: what this conversation is and what to do.
+    var emptyState = AnyView(EmptyView())
+    /// Sends one of our undelivered messages again.
+    var sendAgain: ((ChatMessage) -> Void)?
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 6) {
                     if messages.isEmpty {
-                        Text("No messages yet. Say hi.")
-                            .font(.callout)
-                            .foregroundStyle(Theme.secondaryText)
-                            .padding(.top, 40)
+                        emptyState.padding(.top, 32)
                     }
                     ForEach(messages) { message in
-                        MessageRow(message: message, hidesText: hidesText, carriers: envelopes.carriers(for: message.id))
+                        MessageRow(message: message, hidesText: hidesText, carriers: envelopes.carriers(for: message.id),
+                                   sendAgain: sendAgain.map { action in { action(message) } })
                             .id(message.id)
                     }
                 }
@@ -48,6 +50,7 @@ struct MessageRow: View {
     let message: ChatMessage
     var hidesText = false
     var carriers: Int?
+    var sendAgain: (() -> Void)?
     /// A blurred message the user tapped to peek at. Hides itself again after a few seconds.
     @State private var revealed = false
 
@@ -136,11 +139,24 @@ struct MessageRow: View {
             Text(statusDescription)
             Text("\(message.isOwn ? "Sent" : "Received") \(message.timestamp.formatted(date: .abbreviated, time: .shortened))")
         }
+        // An error should come with a way out.
+        if message.isOwn, message.delivery == .failed, let sendAgain {
+            Button(action: sendAgain) {
+                Label("Send again", systemImage: "arrow.clockwise")
+            }
+            .accessibilityIdentifier("send-again")
+        }
         if !isBlurred {
             Button {
                 Clipboard.copy(message.text)
             } label: {
                 Label("Copy", systemImage: "doc.on.doc")
+            }
+            // Your own words only: passing on other people's messages is their call.
+            if message.isOwn, message.senderKey != "system" {
+                ShareLink(item: message.text) {
+                    Label("Send via AirDrop…", systemImage: "square.and.arrow.up")
+                }
             }
         }
     }
@@ -157,7 +173,7 @@ struct MessageRow: View {
         case .sent: return "Sent"
         case .delivered: return "Delivered to their phone"
         case .read: return "Read"
-        case .failed: return "Not delivered. Letterbox gave up after 3 days"
+        case .failed: return "Not delivered: Letterbox tried for 3 days"
         case nil: return "Sent to everyone nearby"
         }
     }
@@ -197,7 +213,8 @@ private struct DeliveryIcon: View {
         case .sent: Label("Sent", systemImage: "checkmark").labelStyle(.iconOnly)
         case .delivered: Label("Delivered", systemImage: "checkmark.circle").labelStyle(.iconOnly)
         case .read: Label("Read", systemImage: "checkmark.circle.fill").labelStyle(.iconOnly).foregroundStyle(Theme.accent)
-        case .failed: Label("Not delivered", systemImage: "exclamationmark.circle").labelStyle(.iconOnly).foregroundStyle(Theme.bad)
+        // In words, not just a red mark: it's the one state that needs you to act.
+        case .failed: Label("Not delivered. Hold to send again", systemImage: "exclamationmark.circle").foregroundStyle(Theme.bad)
         }
     }
 }
