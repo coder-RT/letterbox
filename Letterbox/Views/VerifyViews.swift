@@ -62,7 +62,7 @@ struct PersonView: View {
             } header: {
                 SectionHeader("Safety number")
             } footer: {
-                SectionFooter("Meet \(peer.nickname) in person and check this number matches the one on their screen, or scan their code. Then you'll know messages really come from them.")
+                SectionFooter("Check in person that \(peer.nickname) sees the same number, or scan their code. Then you know messages really come from them.")
             }
 
             Section {

@@ -192,6 +192,14 @@ public final class ChatStore {
         }
     }
 
+    /// A private message that wasn't delivered: take it out of the conversation and send
+    /// the same text again, as a new message with a fresh 3 days to arrive.
+    public func sendAgain(_ message: ChatMessage) async {
+        guard !isErased, message.isOwn, message.delivery == .failed else { return }
+        timelines[message.channel]?.removeAll { $0.id == message.id }
+        await send(message.text, in: message.channel)
+    }
+
     public func setNickname(_ raw: String) async {
         let clean = Nickname.sanitize(raw)
         guard !clean.isEmpty else { return }

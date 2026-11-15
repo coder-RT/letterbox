@@ -228,6 +228,30 @@ struct EraseTests {
     }
 }
 
+@Suite("Recovering from a failed message")
+@MainActor
+struct SendAgainTests {
+    @Test func aFailedMessageCanBeSentAgainAsANewOne() async {
+        let setup = Setup()
+        await setup.store.start()
+        setup.store.selectedChannel = .direct(sam)
+        await setup.store.submit("are you at the hut?")
+        let original = setup.store.messages(in: .direct(sam)).first!
+        setup.mesh.continuation.yield(.deliveryChanged(messageID: original.id, state: .failed))
+        await settle()
+        let failed = setup.store.messages(in: .direct(sam)).first!
+        #expect(failed.delivery == .failed)
+
+        await setup.store.sendAgain(failed)
+        let now = setup.store.messages(in: .direct(sam))
+        #expect(now.count == 1 && now[0].text == "are you at the hut?" && now[0].id != original.id)
+        #expect(now[0].delivery == .sent)
+
+        await setup.store.sendAgain(now[0]) // not failed: nothing happens
+        #expect(setup.store.messages(in: .direct(sam)).count == 1)
+    }
+}
+
 @Suite("Notification wording")
 struct NotificationTextTests {
     @Test func wording() {

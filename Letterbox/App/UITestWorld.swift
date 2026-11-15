@@ -16,6 +16,7 @@ import LetterboxTestSupport
 ///   - `nearby` (default): Sam is in range and answers.
 ///   - `envelope`: Dave is in range for a few seconds and then leaves; later Bob, a
 ///     courier, walks past and stays.
+///   - `alone`: nobody in range.
 ///   - `catchup`: Ana and Sam talk in #nearby before you arrive; then you meet only Sam,
 ///     who passes on what was said.
 @MainActor
@@ -44,6 +45,8 @@ final class UITestWorld {
             appState: InMemoryBlobStore()
         )
         switch scenario {
+        case "alone":
+            phones = []
         case "catchup":
             phones = [
                 SimulatedPhone(name: "Ana", radio: radio, configuration: config),
@@ -63,6 +66,8 @@ final class UITestWorld {
         await store.setNickname("Me")
         for phone in phones { await phone.start() }
         switch scenario {
+        case "alone":
+            break
         case "catchup":
             radio.connect("Ana", "Sam")
             let (ana, sam, radio) = (phones[0], phones[1], radio)

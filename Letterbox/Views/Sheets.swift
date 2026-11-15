@@ -232,7 +232,7 @@ struct SettingsSheet: View {
                         RowLabel("Your safety code", systemImage: "qrcode")
                     }
                 } footer: {
-                    SectionFooter("Let a friend scan this in person, so they know messages really come from you. Nicknames can be copied; codes can't.")
+                    SectionFooter("Friends scan this in person to know messages really come from you. Anyone can copy a nickname, but not a code.")
                 }
                 Section {
                     Toggle(isOn: Binding(get: { store.showsTextInNotifications },
@@ -243,8 +243,16 @@ struct SettingsSheet: View {
                 } header: {
                     SectionHeader("Alerts")
                 } footer: {
-                    SectionFooter("When Letterbox is closed or your phone is locked, alerts say only that a message arrived. Anyone can read a locked screen, so names and text stay hidden unless you turn this on. The privacy screen always hides them.")
+                    SectionFooter("Off: alerts only say a message arrived, since anyone can read a locked screen. Always hidden with the privacy screen on.")
                 }
+                Section(header: SectionHeader("How it works")) {
+                    RowLabel("Messages hop between phones over Bluetooth. No internet, no accounts.", systemImage: "antenna.radiowaves.left.and.right")
+                    RowLabel("Private messages are encrypted; phones passing them on can't read them.", systemImage: "lock")
+                    RowLabel("Someone out of reach? Hikers you pass carry your message in a sealed envelope.", systemImage: "envelope")
+                    RowLabel("Chats live in memory. Only undelivered messages are saved, encrypted.", systemImage: "memorychip")
+                }
+                .font(.callout)
+                // Destructive and rare: last, where iOS puts it.
                 Section {
                     Button(role: .destructive) { confirmingErase = true } label: {
                         RowLabel("Erase everything", systemImage: "trash")
@@ -252,18 +260,13 @@ struct SettingsSheet: View {
                     }
                     .accessibilityIdentifier("erase-everything")
                 } footer: {
-                    SectionFooter("Deletes your identity, messages waiting to be delivered, envelopes you carry, people you verified or blocked, and settings, from this device. It can't be undone.")
+                    SectionFooter("Deletes everything Letterbox keeps on this phone, including who you are. Can't be undone.")
                 }
-                Section(header: SectionHeader("How it works")) {
-                    RowLabel("Messages hop between phones over Bluetooth. No internet, no accounts.", systemImage: "antenna.radiowaves.left.and.right")
-                    RowLabel("Private messages are end-to-end encrypted. Phones that pass them on can't read them.", systemImage: "lock")
-                    RowLabel("If someone's out of reach, your message travels in a sealed envelope with hikers you pass.", systemImage: "envelope")
-                    RowLabel("Chats stay in memory and disappear when the app closes. Only undelivered messages are saved, encrypted.", systemImage: "memorychip")
-                }
-                .font(.callout)
             }
-            // Keep the first header clear of the bar's scroll-edge fade.
+            // Keep the first header clear of the bar's scroll-edge fade, and the last
+            // footer (under Erase everything) clear of the bottom edge.
             .contentMargins(.top, 24, for: .scrollContent)
+            .contentMargins(.bottom, 40, for: .scrollContent)
             .navigationTitle("Settings")
             .inlineTitle()
             .toolbar {
