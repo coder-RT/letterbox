@@ -133,6 +133,11 @@ struct PeopleSheet: View {
                         systemImage: "antenna.radiowaves.left.and.right",
                         description: Text("Letterbox finds phones running Letterbox within Bluetooth range, and people they can reach.")
                     )
+                    // Bluetooth chat needs Letterbox on both phones.
+                    ShareLink(item: ShareText.invite(from: store.nickname)) {
+                        RowLabel("Invite someone to get Letterbox", systemImage: "person.badge.plus")
+                    }
+                    .accessibilityIdentifier("people-invite")
                 }
                 ForEach(store.peers) { peer in
                     HStack(spacing: 12) {

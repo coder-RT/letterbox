@@ -17,7 +17,7 @@ The four ways to send a text, from most to least everyday:
 
 Do all of this at home, while you still have internet. Once you're on the trail it's too late to download anything.
 
-- [ ] Everyone in the group installs Letterbox and opens it once.
+- [ ] Everyone in the group installs Letterbox and opens it once. Someone missing it? Use **… → Send outside Letterbox → Invite them** to AirDrop a note with how to get it.
 - [ ] Everyone sets a nickname people will recognise: Settings → Nickname.
 - [ ] Verify each other in person: open Nearby, tap ⓘ next to your friend, and scan their code (or check the safety number matches on both screens). They get a Verified badge, and Letterbox warns you if someone else ever uses their name.
 - [ ] Test it: put everyone's phones in airplane mode with Bluetooth on, and send a message in #nearby.
@@ -56,6 +56,7 @@ Letterbox sends texts phone to phone over Bluetooth, so it works deep in a valle
 - So a group that splits up can still swap messages: anyone walking between the groups carries them across.
 - Location channels need internet, so they won't work on the trail. Use #nearby.
 - A question mark next to a name means Letterbox couldn't confirm who sent that message.
+- **Someone without Letterbox?** Bluetooth chat needs the app on both phones. Use **… → Send outside Letterbox** to AirDrop them a message: it works with no internet to iPhones, iPads and Macs nearby, and they tap Accept. It's one-way, so they can't reply in Letterbox.
 
 ## Plain SMS: one bar is often enough
 

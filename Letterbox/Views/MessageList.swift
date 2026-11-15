@@ -142,6 +142,12 @@ struct MessageRow: View {
             } label: {
                 Label("Copy", systemImage: "doc.on.doc")
             }
+            // Your own words only: passing on other people's messages is their call.
+            if message.isOwn, message.senderKey != "system" {
+                ShareLink(item: message.text) {
+                    Label("Send via AirDrop…", systemImage: "square.and.arrow.up")
+                }
+            }
         }
     }
 

@@ -23,6 +23,8 @@ Each feature is scored 1–5 on three things:
 | Envelopes screen and envelope icon with carrier count | Shipped | 4 | 4 | 5 | 4.3 | Unit, integration and UI tests (simulated courier) |
 | Signatures, forgery and replay protection | Shipped | 4 | 5 | 5 | 4.7 | Found and fixed a nonce-0 replay bug |
 | Emoji over Bluetooth | Shipped | 3 | 5 | 4 | 4.0 | Text is UTF-8; no internet needed |
+| Send outside Letterbox (AirDrop or other apps, one-way) | Shipped | 4 | 4 | 4 | 4.0 | Offline to nearby Apple devices; they tap Accept and can't reply unless they install Letterbox |
+| Invite someone (share a note with how to get Letterbox) | Shipped | 4 | 5 | 4 | 4.3 | In "Send outside Letterbox" and on the empty Nearby list |
 | Nickname and commands (`/msg`, `/who`, `/nick`, `/clear`, `/help`) | Shipped | 3 | 5 | 5 | 4.3 | |
 | Verification: safety number, QR scan, Verified badge, impostor warning | Shipped | 4 | 4 | 4 | 4.0 | QR scan needs a real camera to test |
 | Running in the background | Partial | 5 | 2 | 1 | 2.7 | iOS slows Bluetooth in the background; state restoration planned |
