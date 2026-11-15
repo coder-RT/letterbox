@@ -24,8 +24,10 @@
 | SEC-10 Test code in Release | Low | Accepted for now: the test entry point is compiled out (verified). Xcode can't link a package product for Debug only, so this needs moving the simulated world into a debug-only module |
 | SEC-11 First announce wins a PeerID | Low | Open: to be designed with protocol v2 (bind PeerID to proof of key) |
 | SEC-12 to SEC-14 | Info | Accepted or documented |
+| SEC-15 One phone can flush the envelopes a courier carries | Medium | **Fixed** (found in the [gap analysis](gap-analysis.md)). 30 deposits per link per minute, and one depositor fills at most 32 of the 256 slots. DAST: after 1,000 junk deposits the genuine envelope survives and is delivered |
+| SEC-16 Catching up on #nearby (new surface) | Info | Reviewed and tested: answers accepted only to our own request, per link, capped, signature checked against the author's announce, never relayed |
 
-All 9 mesh DAST tests now assert the fixed behaviour; no known issues remain in the suite.
+All 11 mesh DAST tests and 4 catch-up attack tests assert the fixed behaviour; no known issues remain in the suite.
 
 ## Summary (at the time of the assessment)
 
@@ -181,6 +183,24 @@ This is already explained in the app and the README. The "Use the internet" swit
 
 The installed build is signed with a development profile, so `get-task-allow` is true. App Store and TestFlight builds turn this off automatically.
 
+### SEC-15 One phone can flush the envelopes a courier carries (Medium, confirmed, fixed)
+
+Found while comparing against the reference docs, whose couriers keep per-depositor quotas. A courier carried up to 256 envelopes and, when full, dropped whichever expired soonest. Deposits weren't rate-limited and anyone could make one, so a hostile phone in range could push 256 envelopes that expire later than everyone else's and evict every genuine one. The mail a courier carries for others was gone, with no sign of it.
+
+**Fix:** `envelopesPerLinkPerMinute` (30) and `maxCarriedPerDepositor` (32) in `MeshNode.Configuration`. Filling the store now takes at least eight separate links, and genuine envelopes keep their place. DAST: `oneDepositorCantFlushOtherPeoplesEnvelopes`, `envelopeDepositsAreRateLimitedPerLink`, and `envelopeStorageFloodStaysCapped` (ten links still stop at 256).
+
+### SEC-16 Catching up on #nearby: new attack surface (Informational, reviewed)
+
+New packet types `syncRequest` (0x13) and `syncResponse` (0x14) let a phone fetch #nearby messages it missed. Old messages are allowed by design, which is exactly what the freshness check normally prevents, so the surface was reviewed:
+
+- **Unsolicited history:** a response is accepted only on a link we sent a request on, within 30 seconds, and at most 100 per request. DAST: `unsolicitedHistoryIsIgnored`.
+- **Forgery:** each message travels with its author's signed announce; both signatures are checked, the sender IDs must match, and an ID already bound to a live peer with a different key is refused. DAST: `forgedStaleOrExcessiveHistoryIsRejected`, `historyCannotClaimALivePersonsID`.
+- **Age:** nothing older than 12 hours or more than 10 minutes in the future.
+- **Amplification:** requests and responses use TTL 1 and are never relayed; each link is answered at most once a minute. DAST: `requestAndResponseAreNeverRelayed`.
+- **Storage:** 300 messages in memory only, never written to disk.
+
+Residual risk: a peer who saw a message can show it to someone who missed it. That's the purpose, and the message was public. Unsigned messages from senders nobody could check are never archived, so they aren't passed on.
+
 ## What was verified secure
 
 | Area | Result | Evidence |
@@ -268,6 +288,7 @@ Used for this review. Apply it to future changes.
 | 6b | SEC-10 Debug-only test support | Small to medium | Accepted for now |
 | 7 | SEC-11 PeerID conflict handling | Medium | Open (protocol v2) |
 | 8 | SEC-04 / SEC-05 Identity rotation and envelope privacy | Large (protocol v2) | Open |
+| 9 | SEC-15 Courier deposit rate and per-depositor share | Small | Done |
 
 **New limits and their defaults** (in `MeshNode.Configuration`):
 
@@ -279,6 +300,8 @@ Used for this review. Apply it to future changes.
 | `unverifiedMessagesPerLinkPerMinute` | 30 | Posts from senders we can't check, per link |
 | `relayedDirectedPerSenderPerMinute` | 120 | Handshakes and private messages passed on for one sender |
 | `maxPendingReceiptsPerPerson` / `maxIDsPerReceipt` | 2 / 50 | Receipts waiting for someone out of reach |
+| `envelopesPerLinkPerMinute` / `maxCarriedPerDepositor` | 30 / 32 | Envelopes one neighbour can hand you, and keep in your store |
+| `maxSyncMessages` / `syncInterval` | 100 / 60 s | Catching up on #nearby: messages per answer, and how often one link is asked or answered |
 
 If real groups hit these, raise them. The DAST suite shows what each one protects against.
 

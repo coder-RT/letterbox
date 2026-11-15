@@ -15,6 +15,12 @@ public enum PacketType: UInt8, Sendable, CaseIterable {
     /// A sealed message carried by other people (store and forward). Handed to direct
     /// neighbours with TTL 1, or directed at its recipient once a courier meets them.
     case courier = 0x12
+    /// "Which recent #nearby messages am I missing?" Sent to one direct neighbour with
+    /// TTL 1, so it's never relayed.
+    case syncRequest = 0x13
+    /// One missed #nearby message, as its author signed it, plus the author's signed
+    /// announce so it can be checked. TTL 1, and only accepted in answer to our request.
+    case syncResponse = 0x14
 }
 
 /// One mesh packet.

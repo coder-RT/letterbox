@@ -8,6 +8,9 @@ import Foundation
 public enum MeshEvent: Sendable {
     case peersChanged([Peer])
     case publicMessage(ChatMessage)
+    /// A #nearby message sent before we could hear it (we were out of range, off, or
+    /// not yet here), passed on by a neighbour. Signature checked; may be hours old.
+    case publicHistory(ChatMessage)
     case privateMessage(ChatMessage)
     case deliveryChanged(messageID: String, state: DeliveryState)
     case radioChanged(RadioState)
@@ -126,4 +129,36 @@ public protocol BlobStore: Sendable {
 public protocol SettingsStore: Sendable {
     func string(for key: String) -> String?
     func set(_ value: String?, for key: String)
+}
+
+/// Tells the user about a message that arrived while Letterbox wasn't on screen, such as
+/// with the phone locked in a pocket on the trail. Implemented with local notifications:
+/// nothing leaves the device.
+public protocol MessageNotifier: Sendable {
+    /// Asks for permission once; the system remembers the answer.
+    func requestPermission() async
+    /// Shows or replaces the alert for one conversation.
+    func show(_ alert: MessageAlert)
+    /// Removes the alert for a conversation the user has now opened.
+    func clear(conversation: String)
+    func clearAll()
+}
+
+/// One lock-screen alert. There's at most one per conversation; a newer one replaces it.
+public struct MessageAlert: Sendable, Equatable {
+    public let conversation: String
+    public let title: String
+    public let body: String
+
+    public init(conversation: String, title: String, body: String) {
+        self.conversation = conversation
+        self.title = title
+        self.body = body
+    }
+}
+
+/// Deletes everything Letterbox keeps on this device: identity keys, saved messages and
+/// envelopes, people you verified or blocked, and settings.
+public protocol LocalDataEraser: Sendable {
+    func eraseAll()
 }

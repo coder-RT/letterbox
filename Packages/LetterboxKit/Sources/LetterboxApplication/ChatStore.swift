@@ -29,6 +29,13 @@ public final class ChatStore {
     public private(set) var permissions: TransportPermissions
     /// People whose safety number you've compared in person, with their name at the time.
     public private(set) var verified: [Fingerprint: String] = [:]
+    /// People whose messages you don't want to see, with their name at the time.
+    public private(set) var blocked: [Fingerprint: String] = [:]
+    /// Lock-screen alerts show who wrote and what. Off by default: anyone can read a
+    /// locked phone's screen.
+    public private(set) var showsTextInNotifications: Bool
+    /// Everything was erased; the app does nothing more until it's reopened.
+    public private(set) var isErased = false
 
     public private(set) var unread: [ChannelID: Int] = [:]
     private var timelines: [ChannelID: [ChatMessage]] = [:]
@@ -44,12 +51,20 @@ public final class ChatStore {
     private let settings: any SettingsStore
     private let connectivityMonitor: (any ConnectivityMonitor)?
     private let appState: (any BlobStore)?
+    private let notifier: (any MessageNotifier)?
+    private let eraser: (any LocalDataEraser)?
     private var tasks: [Task<Void, Never>] = []
+    /// Whether Letterbox is on screen. Alerts are shown only when it isn't.
+    private var isActive = true
+    private var askedForNotifications = false
+    /// Messages alerted per conversation since the user last looked.
+    private var alerted: [ChannelID: Int] = [:]
     private static let maxMessagesPerChannel = 1000
     private static let nicknameKey = "nickname"
     static let hideMessagesKey = "privacy.hideMessages"
     static let bluetoothKey = "transport.bluetooth"
     static let internetKey = "transport.internet"
+    static let notificationTextKey = "notifications.showText"
 
     public init(
         mesh: any MeshTransport,
@@ -57,7 +72,9 @@ public final class ChatStore {
         locationProvider: any LocationProvider,
         settings: any SettingsStore,
         connectivity: (any ConnectivityMonitor)? = nil,
-        appState: (any BlobStore)? = nil
+        appState: (any BlobStore)? = nil,
+        notifier: (any MessageNotifier)? = nil,
+        eraser: (any LocalDataEraser)? = nil
     ) {
         self.mesh = mesh
         self.locationChannels = locationChannels
@@ -65,10 +82,13 @@ public final class ChatStore {
         self.settings = settings
         connectivityMonitor = connectivity
         self.appState = appState
+        self.notifier = notifier
+        self.eraser = eraser
         myFingerprint = mesh.myFingerprint
         let saved = settings.string(for: Self.nicknameKey).map(Nickname.sanitize) ?? ""
         nickname = saved.isEmpty ? Nickname.random() : saved
         hidesMessages = settings.string(for: Self.hideMessagesKey) == "1"
+        showsTextInNotifications = settings.string(for: Self.notificationTextKey) == "1"
         permissions = TransportPermissions(
             bluetooth: settings.string(for: Self.bluetoothKey) != "0",
             internet: settings.string(for: Self.internetKey) != "0"
@@ -76,6 +96,7 @@ public final class ChatStore {
         settings.set(nickname, for: Self.nicknameKey)
         if let data = appState?.load(), let saved = try? JSONDecoder().decode(SavedState.self, from: data) {
             verified = Dictionary(saved.verified.map { ($0.fingerprint, $0.nickname) }, uniquingKeysWith: { _, last in last })
+            blocked = Dictionary((saved.blocked ?? []).map { ($0.fingerprint, $0.nickname) }, uniquingKeysWith: { _, last in last })
         }
     }
 
@@ -86,6 +107,8 @@ public final class ChatStore {
             var nickname: String
         }
         var verified: [Verified]
+        /// Added later; absent in older files.
+        var blocked: [Verified]?
     }
 
     // MARK: - Lifecycle
@@ -143,6 +166,7 @@ public final class ChatStore {
     // MARK: - Use cases
 
     public func submit(_ raw: String) async {
+        guard !isErased else { return }
         switch ComposerInput.parse(raw) {
         case .empty:
             return
@@ -242,8 +266,11 @@ public final class ChatStore {
     }
 
     private func saveState() {
-        let state = SavedState(verified: verified.map { SavedState.Verified(fingerprint: $0.key, nickname: $0.value) }
-            .sorted { $0.fingerprint.hex < $1.fingerprint.hex })
+        guard !isErased else { return }
+        func list(_ people: [Fingerprint: String]) -> [SavedState.Verified] {
+            people.map { SavedState.Verified(fingerprint: $0.key, nickname: $0.value) }.sorted { $0.fingerprint.hex < $1.fingerprint.hex }
+        }
+        let state = SavedState(verified: list(verified), blocked: list(blocked))
         if let data = try? JSONEncoder().encode(state) { try? appState?.save(data) }
     }
 
@@ -254,6 +281,95 @@ public final class ChatStore {
 
     public func toggleHidesMessages() {
         setHidesMessages(!hidesMessages)
+    }
+
+    public func setShowsTextInNotifications(_ shown: Bool) {
+        showsTextInNotifications = shown
+        settings.set(shown ? "1" : "0", for: Self.notificationTextKey)
+    }
+
+    /// Called by the UI when Letterbox comes on screen or goes off it.
+    public func setActive(_ active: Bool) {
+        isActive = active
+        if active { clearAlerts(for: selectedChannel) }
+    }
+
+    // MARK: - Blocking
+
+    public func isBlocked(_ fingerprint: Fingerprint) -> Bool {
+        blocked[fingerprint] != nil
+    }
+
+    /// Hides everything this person sends, now and later, until unblocked. Their messages
+    /// are still passed on for other people (the mesh needs every phone), just not shown.
+    public func block(_ fingerprint: Fingerprint, nickname: String) {
+        blocked[fingerprint] = Nickname.sanitize(nickname)
+        for channel in timelines.keys {
+            timelines[channel]?.removeAll { $0.senderKey == fingerprint.hex && !$0.isOwn }
+        }
+        saveState()
+    }
+
+    public func unblock(_ fingerprint: Fingerprint) {
+        guard blocked.removeValue(forKey: fingerprint) != nil else { return }
+        saveState()
+    }
+
+    private func isFromBlocked(_ message: ChatMessage) -> Bool {
+        guard !message.isOwn, !blocked.isEmpty else { return false }
+        return blocked.keys.contains { $0.hex == message.senderKey }
+    }
+
+    // MARK: - Erasing
+
+    /// Deletes everything Letterbox keeps on this device and stops it. Bluetooth goes
+    /// quiet, messages on screen disappear, and the next launch starts as a new person.
+    public func eraseEverything() async {
+        guard !isErased else { return }
+        await mesh.stop() // stops first, so nothing is saved again after the wipe
+        await locationChannels.leave()
+        isErased = true
+        tasks.forEach { $0.cancel() }
+        tasks.removeAll()
+        eraser?.eraseAll()
+        notifier?.clearAll()
+        timelines = [:]
+        unread = [:]
+        alerted = [:]
+        peers = []
+        directContacts = [:]
+        verified = [:]
+        blocked = [:]
+        envelopes = .empty
+        location = nil
+        selectedChannel = .mesh
+    }
+
+    // MARK: - Alerts
+
+    private func askForNotificationsOnce() async {
+        guard !askedForNotifications, let notifier else { return }
+        askedForNotifications = true
+        await notifier.requestPermission() // asked when you first send, when a reply makes sense
+    }
+
+    /// Alerts for a live message from someone else while Letterbox is off screen. Only
+    /// #nearby and private messages: location channels can be busy, and caught-up history
+    /// is old news.
+    private func alertIfNeeded(_ message: ChatMessage) {
+        guard let notifier, !isActive, !message.isOwn, !isErased else { return }
+        switch message.channel {
+        case .mesh, .direct: break
+        case .location: return
+        }
+        alerted[message.channel, default: 0] += 1
+        let showText = showsTextInNotifications && !hidesMessages // the privacy screen hides alerts too
+        notifier.show(NotificationText.alert(for: message, count: alerted[message.channel] ?? 1, showText: showText))
+    }
+
+    private func clearAlerts(for channel: ChannelID) {
+        alerted[channel] = nil
+        notifier?.clear(conversation: NotificationText.conversation(channel))
     }
 
     public func openDirect(with peer: Peer) {
@@ -287,6 +403,7 @@ public final class ChatStore {
     }
 
     private func send(_ text: String, in channel: ChannelID) async {
+        await askForNotificationsOnce()
         switch channel {
         case .mesh:
             guard permissions.bluetooth else {
@@ -334,12 +451,17 @@ public final class ChatStore {
                 directContacts[peer.fingerprint] = peer.nickname
             }
         case let .publicMessage(message):
-            append(message)
+            guard !isFromBlocked(message) else { return }
+            if append(message) { alertIfNeeded(message) }
+        case let .publicHistory(message):
+            guard !isFromBlocked(message) else { return }
+            append(message, inTimeOrder: true)
         case let .privateMessage(message):
+            guard !isFromBlocked(message) else { return }
             if case let .direct(fingerprint) = message.channel {
                 directContacts[fingerprint] = message.senderName
             }
-            append(message)
+            if append(message) { alertIfNeeded(message) }
             if message.channel == selectedChannel, case let .direct(fingerprint) = message.channel {
                 Task { await mesh.markRead(messageIDs: [message.id], from: fingerprint) }
             }
@@ -360,16 +482,26 @@ public final class ChatStore {
     private func apply(_ event: LocationEvent) {
         switch event {
         case let .message(message):
+            guard !isFromBlocked(message) else { return }
             append(message)
         case let .relaysChanged(connected, total):
             relays = (connected, total)
         }
     }
 
-    private func append(_ message: ChatMessage) {
+    /// Adds a message once. Live messages go at the end; caught-up ones (`inTimeOrder`)
+    /// are placed by when they were sent, so the conversation still reads in order.
+    @discardableResult
+    private func append(_ message: ChatMessage, inTimeOrder: Bool = false) -> Bool {
         var timeline = timelines[message.channel] ?? []
-        guard !timeline.contains(where: { $0.id == message.id }) else { return }
-        timeline.append(message)
+        guard !timeline.contains(where: { $0.id == message.id }) else { return false }
+        if inTimeOrder, let index = timeline.lastIndex(where: { $0.timestamp <= message.timestamp }) {
+            timeline.insert(message, at: index + 1)
+        } else if inTimeOrder {
+            timeline.insert(message, at: 0)
+        } else {
+            timeline.append(message)
+        }
         if timeline.count > Self.maxMessagesPerChannel {
             timeline.removeFirst(timeline.count - Self.maxMessagesPerChannel)
         }
@@ -377,6 +509,7 @@ public final class ChatStore {
         if message.channel != selectedChannel, !message.isOwn {
             unread[message.channel, default: 0] += 1
         }
+        return true
     }
 
     private func updateDelivery(_ id: String, _ state: DeliveryState) {
@@ -409,6 +542,7 @@ public final class ChatStore {
 
     private func channelOpened(_ channel: ChannelID) {
         unread[channel] = nil
+        clearAlerts(for: channel)
         guard case let .direct(fingerprint) = channel else { return }
         let unreadIDs = messages(in: channel).filter { !$0.isOwn }.map(\.id)
         Task { await mesh.markRead(messageIDs: unreadIDs, from: fingerprint) }

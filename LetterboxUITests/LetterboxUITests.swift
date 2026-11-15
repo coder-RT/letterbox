@@ -140,6 +140,53 @@ final class LetterboxUITests: XCTestCase {
         XCTAssertTrue(element(containing: "Verified", in: app).waitForExistence(timeout: 5), "The list shows the badge too")
     }
 
+    /// You arrive after Ana and Sam talked, and meet only Sam: what Ana said reaches you
+    /// through Sam's phone, checked against Ana's signature.
+    func testCatchingUpOnNearbyAfterArriving() {
+        let app = launch(scenario: "catchup")
+        XCTAssertTrue(element(containing: "Meet at the hut at 5", in: app).waitForExistence(timeout: 20))
+        XCTAssertTrue(element(containing: "I'll bring the stove", in: app).waitForExistence(timeout: 5))
+        let first = element(containing: "Meet at the hut at 5", in: app).frame.minY
+        let second = element(containing: "I'll bring the stove", in: app).frame.minY
+        XCTAssertLessThan(first, second, "Shown in the order they were written")
+    }
+
+    func testBlockingSomeoneHidesTheirMessages() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        send("hello", in: app)
+        XCTAssertTrue(element(containing: "Sam heard you", in: app).waitForExistence(timeout: 10))
+        app.buttons["people-button"].tap()
+        app.buttons["person-info-Sam"].tap()
+        let block = app.buttons["block-person"]
+        XCTAssertTrue(block.waitForExistence(timeout: 5))
+        block.tap()
+        XCTAssertTrue(app.buttons["unblock-person"].waitForExistence(timeout: 5))
+        app.navigationBars["Sam"].buttons.firstMatch.tap()
+        done(app)
+        XCTAssertFalse(element(containing: "Sam heard you", in: app).exists, "Earlier messages disappear")
+        send("anyone?", in: app)
+        Thread.sleep(forTimeInterval: 3) // Sam answers, but we don't see it
+        XCTAssertFalse(element(containing: "Sam heard you", in: app).exists)
+    }
+
+    func testEraseEverythingAsksFirstThenStops() {
+        let app = launch()
+        waitForPeople(app, count: 1)
+        openMore(app, item: "Settings")
+        let erase = app.buttons["erase-everything"]
+        XCTAssertTrue(erase.waitForExistence(timeout: 5))
+        erase.tap()
+        // The confirmation is a separate step; its button may lose the identifier.
+        let byID = app.buttons["confirm-erase"].firstMatch
+        let confirm = byID.waitForExistence(timeout: 3)
+            ? byID
+            : app.buttons.matching(NSPredicate(format: "label == 'Erase everything'")).allElementsBoundByIndex.last!
+        confirm.tap()
+        XCTAssertTrue(element(containing: "Everything is erased", in: app).waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["send-button"].exists, "Nothing can be sent after erasing")
+    }
+
     func testPrivacyScreen() {
         let app = launch()
         waitForPeople(app, count: 1)

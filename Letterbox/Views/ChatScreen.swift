@@ -15,6 +15,15 @@ struct ChatScreen: View {
     }
 
     var body: some View {
+        // After "Erase everything" the chat is gone entirely, not just covered.
+        if store.isErased {
+            ErasedScreen()
+        } else {
+            chat
+        }
+    }
+
+    private var chat: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 RadioBanner(state: store.radio)
@@ -48,6 +57,8 @@ struct ChatScreen: View {
             }
         }
         .overlay { if showsPrivacyCover { PrivacyCover() } }
+        // Alerts go to the lock screen only while Letterbox is off screen.
+        .onChange(of: scenePhase, initial: true) { _, phase in store.setActive(phase == .active) }
     }
 
     /// In privacy mode, cover the screen while the app is inactive so the app
@@ -231,6 +242,20 @@ private struct PrivacyCover: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+    }
+}
+
+/// After "Erase everything": nothing is left to show, and nothing runs until reopened.
+private struct ErasedScreen: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("Everything is erased", systemImage: "trash")
+        } description: {
+            Text("Your identity, messages, envelopes and settings are gone from this device. Close Letterbox. Next time it opens, you'll start as someone new.")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
+        .accessibilityIdentifier("erased-screen")
     }
 }
 

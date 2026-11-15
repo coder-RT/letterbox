@@ -71,6 +71,21 @@ private func forgedAnnounce(name: String) -> Data {
     return packet.encoded()
 }
 
+/// A sealed envelope for a random stranger, handed over as a courier deposit (TTL 1).
+private func junkEnvelope(from sender: IdentityKeys, expiry: Date = Date().addingTimeInterval(3600)) throws -> Packet {
+    let stranger = IdentityKeys.generate()
+    let contact = Contact(fingerprint: stranger.fingerprint, nickname: "s", noiseKey: stranger.noisePublic, lastSeen: Date())
+    let envelope = try #require(Courier.seal(.message(id: UUID().uuidString, nickname: "m", text: "x", timestamp: ms()),
+                                             to: contact, from: sender, expiry: expiry))
+    return Packet(type: .courier, ttl: 1, timestamp: ms(), packetID: Packet.randomPacketID(), sender: .random(),
+                  payload: envelope.encoded())
+}
+
+private func courierFrame(_ envelope: CourierEnvelope) -> Data {
+    Packet(type: .courier, ttl: 1, timestamp: ms(), packetID: Packet.randomPacketID(), sender: .random(),
+           payload: envelope.encoded()).encoded()
+}
+
 private func frames(_ radio: InMemoryRadio, from: String, to: String, type: PacketType) -> Int {
     radio.transmissions.filter { $0.from == from && $0.to == to && (try? Packet.decode($0.frame))?.type == type }.count
 }
@@ -223,30 +238,76 @@ struct SecurityDASTTests {
         #expect(relayed <= 30)
     }
 
-    // SEC-DAST-06
+    // SEC-DAST-06: many hostile phones together still can't grow storage past the cap.
     @Test func envelopeStorageFloodStaysCapped() async throws {
         let radio = InMemoryRadio()
-        let (bob, bobWatch, _) = node("bob", radio)
-        let attacker = radio.makeLink("mallory")
-        radio.connect("mallory", "bob")
+        var settings = config()
+        settings.envelopesPerLinkPerMinute = 10_000 // isolate the caps from the rate limit
+        let (bob, bobWatch, _) = node("bob", radio, config: settings)
         await bob.start()
+        let attackers = (0..<10).map { radio.makeLink("mallory\($0)") }
+        for index in attackers.indices { radio.connect("mallory\(index)", "bob") }
 
         let sender = IdentityKeys.generate()
-        for index in 0..<1000 {
-            let stranger = IdentityKeys.generate()
-            let contact = Contact(fingerprint: stranger.fingerprint, nickname: "s", noiseKey: stranger.noisePublic, lastSeen: Date())
-            let envelope = try #require(Courier.seal(.message(id: "e\(index)", nickname: "m", text: "x", timestamp: ms()),
-                                                     to: contact, from: sender, expiry: Date().addingTimeInterval(3600)))
-            var packet = Packet(type: .courier, ttl: 1, timestamp: ms(), packetID: Packet.randomPacketID(), sender: .random(),
-                                payload: envelope.encoded())
-            packet.ttl = 1
-            attacker.send(packet.encoded(), to: "bob")
+        for attacker in attackers {
+            for _ in 0..<100 { attacker.send(try junkEnvelope(from: sender).encoded(), to: "bob") }
         }
         #expect(await until(.seconds(5)) { (await bobWatch.envelopes?.carryingForOthers ?? 0) >= 256 })
         try await Task.sleep(for: .milliseconds(300))
         let carried = await bobWatch.envelopes?.carryingForOthers ?? 0
-        print("SEC-DAST-06: Bob carries \(carried) envelopes after 1000 were pushed at him")
+        print("SEC-DAST-06: Bob carries \(carried) envelopes after 10 phones pushed 1000 at him")
         #expect(carried == 256)
+    }
+
+    // SEC-DAST-11: one hostile phone can't push out the mail Bob carries for others.
+    @Test func oneDepositorCantFlushOtherPeoplesEnvelopes() async throws {
+        let radio = InMemoryRadio()
+        var settings = config()
+        settings.envelopesPerLinkPerMinute = 10_000
+        let (bob, bobWatch, _) = node("bob", radio, config: settings)
+        let daveKeys = IdentityKeys.generate()
+        let (dave, daveWatch, _) = node("dave", radio, identity: daveKeys)
+        await bob.start()
+
+        // Alice hands Bob a genuine envelope for Dave.
+        let alice = IdentityKeys.generate()
+        let aliceLink = radio.makeLink("alice")
+        radio.connect("alice", "bob")
+        let daveContact = Contact(fingerprint: daveKeys.fingerprint, nickname: "dave", noiseKey: daveKeys.noisePublic, lastSeen: Date())
+        let genuine = try #require(Courier.seal(.message(id: "real", nickname: "alice", text: "Camp moved to the lake", timestamp: ms()),
+                                                to: daveContact, from: alice, expiry: Date().addingTimeInterval(3600)))
+        aliceLink.send(courierFrame(genuine), to: "bob")
+        #expect(await until { (await bobWatch.envelopes?.carryingForOthers ?? 0) == 1 })
+
+        // Mallory then pushes 1,000 envelopes that expire later (the old eviction rule
+        // would have dropped Alice's first).
+        let mallory = radio.makeLink("mallory")
+        radio.connect("mallory", "bob")
+        for _ in 0..<1000 {
+            mallory.send(try junkEnvelope(from: IdentityKeys.generate(), expiry: Date().addingTimeInterval(2 * 86_400)).encoded(), to: "bob")
+        }
+        try await Task.sleep(for: .milliseconds(500))
+        let carried = await bobWatch.envelopes?.carryingForOthers ?? 0
+        print("SEC-DAST-11: Bob carries \(carried) envelopes (1 genuine + Mallory's share)")
+        #expect(carried == 1 + settings.maxCarriedPerDepositor)
+
+        // Dave walks past Bob and still gets Alice's message.
+        radio.connect("dave", "bob")
+        await dave.start()
+        #expect(await until(.seconds(6)) { await daveWatch.privateMessages.contains { $0.text == "Camp moved to the lake" } })
+    }
+
+    // SEC-DAST-12: deposits are rate-limited per link with the default settings.
+    @Test func envelopeDepositsAreRateLimitedPerLink() async throws {
+        let radio = InMemoryRadio()
+        let (bob, bobWatch, _) = node("bob", radio)
+        let mallory = radio.makeLink("mallory")
+        radio.connect("mallory", "bob")
+        await bob.start()
+        for _ in 0..<200 { mallory.send(try junkEnvelope(from: IdentityKeys.generate()).encoded(), to: "bob") }
+        try await Task.sleep(for: .milliseconds(500))
+        let carried = await bobWatch.envelopes?.carryingForOthers ?? 0
+        #expect(carried == Int(MeshNode.Configuration().envelopesPerLinkPerMinute))
     }
 
     // SEC-DAST-07 → finding SEC-07 (fixed)

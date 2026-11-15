@@ -50,6 +50,9 @@ struct CarriedEnvelopes {
     struct Item {
         let envelope: CourierEnvelope
         let received: Date
+        /// The link it was handed over on, for the per-depositor share (nil once restored
+        /// from disk: link IDs don't survive a restart).
+        var depositor: LinkID?
         /// Last time we handed it to its recipient. We keep it until it expires, since a
         /// hand-off across several hops can be lost; the recipient drops duplicates.
         var lastDelivery: Date?
@@ -72,9 +75,15 @@ struct CarriedEnvelopes {
     }
 
     /// Returns false if it's already carried, already expired, or there's no room.
-    mutating func insert(_ envelope: CourierEnvelope, received: Date) -> Bool {
+    /// - Parameters:
+    ///   - depositor: Who handed it over. One depositor may fill at most
+    ///     `perDepositorLimit` slots, so a single hostile phone can't push out everyone
+    ///     else's mail by depositing junk (see docs/gap-analysis.md).
+    mutating func insert(_ envelope: CourierEnvelope, received: Date, depositor: LinkID? = nil,
+                         perDepositorLimit: Int = .max) -> Bool {
         guard items[envelope.id] == nil else { return false }
-        let item = Item(envelope: envelope, received: received)
+        if let depositor, items.values.count(where: { $0.depositor == depositor }) >= perDepositorLimit { return false }
+        let item = Item(envelope: envelope, received: received, depositor: depositor)
         guard expiry(of: item) > received else { return false }
         prune(now: received)
         if items.count >= capacity {

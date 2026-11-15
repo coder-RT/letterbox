@@ -47,6 +47,9 @@ All icons are **SF Symbols**. They come with Xcode, match the system controls, s
 | More | `ellipsis.circle` | Standard overflow menu |
 | Send outside Letterbox | `square.and.arrow.up` | The system's share symbol: it opens the share sheet, with AirDrop first |
 | Invite someone | `person.badge.plus` | Adding a person |
+| Alerts setting | `bell.badge` | The system's notification symbol |
+| Erase everything | `trash` | Deleting, shown in red with a confirmation |
+| Block, unblock | `nosign` | "Not allowed"; `hand.raised` already means the privacy screen |
 
 ### Licensing
 

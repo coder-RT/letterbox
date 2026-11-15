@@ -212,6 +212,7 @@ struct SettingsSheet: View {
     @Environment(ChatStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var nickname = ""
+    @State private var confirmingErase = false
 
     var body: some View {
         NavigationStack {
@@ -233,6 +234,26 @@ struct SettingsSheet: View {
                 } footer: {
                     SectionFooter("Let a friend scan this in person, so they know messages really come from you. Nicknames can be copied; codes can't.")
                 }
+                Section {
+                    Toggle(isOn: Binding(get: { store.showsTextInNotifications },
+                                         set: { store.setShowsTextInNotifications($0) })) {
+                        RowLabel("Show names and text in alerts", systemImage: "bell.badge")
+                    }
+                    .accessibilityIdentifier("notification-text-toggle")
+                } header: {
+                    SectionHeader("Alerts")
+                } footer: {
+                    SectionFooter("When Letterbox is closed or your phone is locked, alerts say only that a message arrived. Anyone can read a locked screen, so names and text stay hidden unless you turn this on. The privacy screen always hides them.")
+                }
+                Section {
+                    Button(role: .destructive) { confirmingErase = true } label: {
+                        RowLabel("Erase everything", systemImage: "trash")
+                            .foregroundStyle(Theme.bad) // the system red is just under 4.5:1
+                    }
+                    .accessibilityIdentifier("erase-everything")
+                } footer: {
+                    SectionFooter("Deletes your identity, messages waiting to be delivered, envelopes you carry, people you verified or blocked, and settings, from this device. It can't be undone.")
+                }
                 Section(header: SectionHeader("How it works")) {
                     RowLabel("Messages hop between phones over Bluetooth. No internet, no accounts.", systemImage: "antenna.radiowaves.left.and.right")
                     RowLabel("Private messages are end-to-end encrypted. Phones that pass them on can't read them.", systemImage: "lock")
@@ -249,6 +270,17 @@ struct SettingsSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .onAppear { nickname = store.nickname }
+            .confirmationDialog("Erase everything from this device?", isPresented: $confirmingErase, titleVisibility: .visible) {
+                Button("Erase everything", role: .destructive) {
+                    Task {
+                        await store.eraseEverything()
+                        dismiss()
+                    }
+                }
+                .accessibilityIdentifier("confirm-erase")
+            } message: {
+                Text("Letterbox stops, and next time it opens you'll be someone new. People you verified will see a new safety number.")
+            }
         }
     }
 
